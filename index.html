@@ -7,7 +7,7 @@
 
 <head>
     <!-- change this to your project name -->
-    <title>sva_ui</title>
+    <title>sva_uif</title>
 
     <!-- config for our rust wasm binary. go to https://trunkrs.dev/assets/#rust for more customization -->
     <link data-trunk rel="rust" data-wasm-opt="2" />
@@ -127,11 +127,11 @@
     <!-- Force refresh (Ctrl + F5) to load the latest files instead of cached files  -->
     <script>
         // We disable caching during development so that we always view the latest version.
-        if ('serviceWorker' in navigator && window.location.hash !== "#dev") {
-            window.addEventListener('load', function () {
-                navigator.serviceWorker.register('sw.js');
-            });
-        }
+        // if ('serviceWorker' in navigator && window.location.hash !== "#dev") {
+        //     window.addEventListener('load', function () {
+        //         navigator.serviceWorker.register('sw.js');
+        //     });
+        // }
     </script>
 </body>
 
