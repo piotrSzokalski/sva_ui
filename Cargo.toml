@@ -1,12 +1,18 @@
 [package]
-name = "eframe_template"
+name = "sva_ui"
 version = "0.1.0"
-authors = ["Emil Ernerfeldt <emil.ernerfeldt@gmail.com>"]
 edition = "2021"
 rust-version = "1.71"
 
 
 [dependencies]
+
+# Virtual machine
+
+simple_virtual_assembler = {git = "https://github.com/piotrSzokalski/simple_virtual_assembler.git"} 
+
+# UI liblary
+
 egui = "0.23.0"
 eframe = { version = "0.23.0", default-features = false, features = [
     "accesskit",     # Make egui comptaible with screen readers. NOTE: adds a lot of dependencies.
