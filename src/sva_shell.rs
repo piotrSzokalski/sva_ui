@@ -1,51 +1,99 @@
 use std::default;
 
+use eframe::glow::NONE;
 use egui::{containers::Window, widgets::Label, Context};
 use egui::{Align, Slider, TextEdit, Ui, Widget};
 
-use simple_virtual_assembler::virtual_machine::VirtualMachine;
+use simple_virtual_assembler::assembler::parsing_err::ParsingError;
+use simple_virtual_assembler::vm::instruction::Instruction;
+use simple_virtual_assembler::vm::virtual_machine::VirtualMachine;
 
 use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 
-use simple_virtual_assembler::assembler::Assembler;
+use simple_virtual_assembler::assembler::assembler::Assembler;
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct SVAShell {
+    /// Id
     id: i32,
-    sva: VirtualMachine,
-    //assembler: Assembler,
+    /// Tile
+    title: String,
+    /// Simple virtual machine
+    vm: VirtualMachine,
+    /// Assembler for simple virtual machine
+    assembler: Assembler,
+    /// Code before assembly
     code: String,
+    /// ( Currently useless ) Program to be executed by vm
+    program: Vec<Instruction>,
+    /// Error assembling code to program
+    parsing_error: Option<ParsingError>,
+    /// Parsing error message
+    parsing_error_msg: String,
 }
 
-impl Default for SVAShell {
-    fn default() -> Self {
-        Self {
-            id: 0,
-            sva: VirtualMachine::new(vec![]),
-            //assembler: Assembler {},
-            code: "".to_string(),
-        }
-    }
-}
+// impl Default for SVAShell {
+//     fn default() -> Self {
+//         Self {
+//             id: 0,
+//             sva: VirtualMachine::new(),
+//             code: String::new(),
+//             acc_label: String::new(),
+//             err_buffer: String::new(),
+//             assembler: Assembler::new(),
+//         }
+//     }
+// }
 
 impl SVAShell {
-    pub fn new(id: i32) -> SVAShell {
+    pub fn new(id: i32, title: String) -> SVAShell {
         SVAShell {
             id,
-            sva: VirtualMachine::new(vec![]),
-            //assembler: Assembler {},
-            code: "CODE".to_string(),
+            title,
+            vm: VirtualMachine::new(),
+            assembler: Assembler::new(),
+            code: String::new(),
+            program: Vec::new(),
+
+            parsing_error_msg: String::new(),
+            parsing_error: None,
         }
     }
 
     pub fn show(&mut self, ctx: &Context, ui: &mut Ui) {
-        Window::new(format!("Window {}", self.id)).show(ctx, |ui| self.ui_content(ui));
+        egui::Window::new(&self.title).show(ctx, |ui| {
+            ui.vertical(|ui| {});
 
-        // Handle button click outside the window
-        if ui.button("X").clicked() {
-            // Handle button click action
-        }
+            ui.horizontal(|ui| {
+                if ui.button("run").clicked() {
+                    self.assemble_and_run();
+                }
+
+                //assemble_and_run(&mut self.vm, &self.code, &mut self.tex_t);
+            });
+            CodeEditor::default()
+                .id_source("code editor")
+                .with_rows(12)
+                .with_fontsize(14.0)
+                .with_theme(ColorTheme::GRUVBOX)
+                .with_syntax(Syntax::rust())
+                .with_numlines(true)
+                .show(ui, &mut self.code);
+
+            ui.label("acc");
+            ui.button(self.vm.get_acc().to_string());
+            ui.label("pc");
+            ui.button(self.vm.get_pc().to_string());
+
+            if let Some(parsing_error) = &self.parsing_error {
+                ui.label(parsing_error.to_string());
+                //ui.label("ERROR");
+            } else {
+                //ui.label("NO error");
+            }
+
+            ui.label(self.vm.to_string());
+        });
     }
-    
 
     fn ui_content(&mut self, ui: &mut Ui) {
         ui.horizontal(|ui| {
@@ -60,6 +108,48 @@ impl SVAShell {
                 .show(ui, &mut self.code);
         });
     }
+
+    /// Assembles code to instructions and loads them to vm
+    fn assemble_and_load(&mut self) {
+        let res = self.assembler.parse(&self.code);
+
+        match res {
+            Ok(program) => {
+                //TODO:
+                //temp
+                self.vm = VirtualMachine::new_with_program(program);
+                //self.vm.load_program(program);
+                self.parsing_error = None
+            }
+            Err(err) => self.parsing_error = Some(err),
+        }
+    }
+
+    /// Run vm's program
+    fn run(&mut self) {
+        match self.parsing_error {
+            Some(_) => todo!(),
+            None => {
+                //self.vm.load_program(self.program.clone());
+                //self.vm.load_program(self.program);
+                self.vm.run()
+            }
+        }
+    }
+
+    /// Assembles code to instructions and runs them on  vm
+    fn assemble_and_run(&mut self) {
+        println!("test");
+
+        self.assemble_and_load();
+
+        if let Some(_parsing_error) = &self.parsing_error {
+            self.title = "test".to_owned();
+        } else {
+            self.title = "ok".to_owned();
+            self.run();
+        }
+    }
 }
 
 impl Widget for SVAShell {
@@ -67,7 +157,7 @@ impl Widget for SVAShell {
         // Use Egui API to create your custom widget UI
 
         let response = Label::new("ascx").ui(ui);
-        // Perform any additional actions or logic for your widge
+        // Perform any additional actions or logic for your widget
         response
     }
 }
