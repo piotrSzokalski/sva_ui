@@ -24,6 +24,7 @@ log = "0.4"
 
 # You only need serde if you want app persistence:
 serde = { version = "1", features = ["derive"] }
+# Code editor
 egui_code_editor = "0.1.8"
 
 # native:

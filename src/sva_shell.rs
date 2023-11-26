@@ -29,6 +29,7 @@ pub struct SVAShell {
     parsing_error: Option<ParsingError>,
     /// Parsing error message
     parsing_error_msg: String,
+    
 }
 
 // impl Default for SVAShell {
@@ -59,8 +60,12 @@ impl SVAShell {
         }
     }
 
+    pub fn get_id(&self) -> i32 {
+        self.id
+    }
+
     pub fn show(&mut self, ctx: &Context, ui: &mut Ui) {
-        egui::Window::new(&self.title).show(ctx, |ui| {
+        egui::Window::new( &self.id.to_string()).open(&mut true).show(ctx, |ui| {
             ui.vertical(|ui| {});
 
             ui.horizontal(|ui| {
@@ -70,42 +75,61 @@ impl SVAShell {
 
                 //assemble_and_run(&mut self.vm, &self.code, &mut self.tex_t);
             });
-            CodeEditor::default()
-                .id_source("code editor")
-                .with_rows(12)
-                .with_fontsize(14.0)
-                .with_theme(ColorTheme::GRUVBOX)
-                .with_syntax(Syntax::rust())
-                .with_numlines(true)
-                .show(ui, &mut self.code);
-
-            ui.label("acc");
-            ui.button(self.vm.get_acc().to_string());
-            ui.label("pc");
-            ui.button(self.vm.get_pc().to_string());
+            egui::ScrollArea::vertical()
+                .max_height(600.0)
+                .show(ui, |ui| {
+                    CodeEditor::default()
+                        .id_source("code editor")
+                        .with_rows(12)
+                        .with_fontsize(12.0)
+                        .with_theme(ColorTheme::GRUVBOX)
+                        .with_syntax(Syntax::rust())
+                        .with_numlines(true)
+                        .show(ui, &mut self.code);
+                });
 
             if let Some(parsing_error) = &self.parsing_error {
-                ui.label(parsing_error.to_string());
-                //ui.label("ERROR");
-            } else {
-                //ui.label("NO error");
+                // ui.label(parsing_error.to_string());
+                ui.label(
+                    egui::RichText::new(parsing_error.to_string())
+                        .color(egui::Color32::from_rgb(255, 0, 0)),
+                );
             }
 
-            ui.label(self.vm.to_string());
+            ui.horizontal(|ui| {
+                ui.label("acc");
+                ui.button(self.vm.get_acc().to_string());
+                ui.label("pc");
+                ui.button(self.vm.get_pc().to_string());
+                ui.label("flag");
+                ui.button(self.vm.get_flag().to_string());
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("r 0-3");
+                ui.button(format!("{:?}", self.vm.get_registers()));
+                ui.label("p 0-3");
+                ui.button(format!("{:?}", self.vm.get_ports()));
+            });
+
+            //ui.label(self.vm.to_string());
         });
     }
 
+    //TODO:
     fn ui_content(&mut self, ui: &mut Ui) {
-        ui.horizontal(|ui| {
-            ui.label("Editable Text:");
-            CodeEditor::default()
-                .id_source("code editor")
-                .with_rows(12)
-                .with_fontsize(10.0)
-                .with_theme(ColorTheme::GRUVBOX)
-                .with_syntax(Syntax::rust())
-                .with_numlines(true)
-                .show(ui, &mut self.code);
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.label("Editable Text:");
+                CodeEditor::default()
+                    .id_source("code editor")
+                    .with_rows(12)
+                    .with_fontsize(10.0)
+                    .with_theme(ColorTheme::GRUVBOX)
+                    .with_syntax(Syntax::rust())
+                    .with_numlines(true)
+                    .show(ui, &mut self.code);
+            });
         });
     }
 
