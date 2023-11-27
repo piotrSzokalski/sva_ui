@@ -11,6 +11,8 @@ use simple_virtual_assembler::vm::virtual_machine::VirtualMachine;
 use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 
 use simple_virtual_assembler::assembler::assembler::Assembler;
+
+use simple_virtual_assembler::language::Language;
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct SVAShell {
     /// Id
@@ -27,8 +29,10 @@ pub struct SVAShell {
     program: Vec<Instruction>,
     /// Error assembling code to program
     parsing_error: Option<ParsingError>,
-    /// Parsing error message
+    /// ( Currently useless ) Parsing error message
     parsing_error_msg: String,
+    /// Language
+    language: Language
     
 }
 
@@ -47,7 +51,7 @@ pub struct SVAShell {
 
 impl SVAShell {
     pub fn new(id: i32, title: String) -> SVAShell {
-        SVAShell {
+        let mut s = SVAShell {
             id,
             title,
             vm: VirtualMachine::new(),
@@ -57,11 +61,19 @@ impl SVAShell {
 
             parsing_error_msg: String::new(),
             parsing_error: None,
-        }
+            language: Language::En
+        };
+        s.set_language(Language::Pl);
+        s
     }
 
     pub fn get_id(&self) -> i32 {
         self.id
+    }
+
+    pub fn set_language(&mut self, language: Language) {
+        //self.language = language;
+        self.assembler.set_language(language);
     }
 
     pub fn show(&mut self, ctx: &Context, ui: &mut Ui) {
@@ -72,6 +84,10 @@ impl SVAShell {
                 if ui.button("run").clicked() {
                     self.assemble_and_run();
                 }
+                if ui.button("step").clicked() {
+                    self.step();
+                }
+
 
                 //assemble_and_run(&mut self.vm, &self.code, &mut self.tex_t);
             });
@@ -112,24 +128,7 @@ impl SVAShell {
                 ui.button(format!("{:?}", self.vm.get_ports()));
             });
 
-            //ui.label(self.vm.to_string());
-        });
-    }
-
-    //TODO:
-    fn ui_content(&mut self, ui: &mut Ui) {
-        egui::ScrollArea::vertical().show(ui, |ui| {
-            ui.horizontal(|ui| {
-                ui.label("Editable Text:");
-                CodeEditor::default()
-                    .id_source("code editor")
-                    .with_rows(12)
-                    .with_fontsize(10.0)
-                    .with_theme(ColorTheme::GRUVBOX)
-                    .with_syntax(Syntax::rust())
-                    .with_numlines(true)
-                    .show(ui, &mut self.code);
-            });
+            ui.label(self.vm.to_string());
         });
     }
 
@@ -146,6 +145,23 @@ impl SVAShell {
                 self.parsing_error = None
             }
             Err(err) => self.parsing_error = Some(err),
+        }
+    }
+    /// Execute one instruction
+    fn step(&mut self) {
+
+        if self.vm.get_program().is_empty() {
+            self.assemble_and_load();
+        }
+        if self.vm.get_pc() >= self.vm.get_program().len() {
+            self.vm.reset_pc();
+        }
+
+        match self.parsing_error {
+            Some(_) => todo!(),
+            None => {
+                self.vm.execute();
+            }
         }
     }
 

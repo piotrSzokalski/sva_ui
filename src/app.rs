@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, fs::File};
 
 use egui::Button;
 use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
@@ -8,30 +8,39 @@ use simple_virtual_assembler::assembler::parsing_err::ParsingError;
 use simple_virtual_assembler::vm::instruction::Instruction;
 use simple_virtual_assembler::vm::virtual_machine::VirtualMachine;
 
+use simple_virtual_assembler::language::Language;
+
 use crate::sva_shell::SVAShell;
 
 use crate::test_window::TetsWindow;
 
 use crate::test::abc;
 
-#[derive(PartialEq, serde::Deserialize, serde::Serialize)]
-enum Language {
-    /// Polish
-    Pl,
-    /// English
-    En,
-}
+use serde::{Deserialize, Serialize};
 
-impl Display for Language {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let name = match self {
-            Language::Pl => "Polski",
-            Language::En => "English",
-        };
+use serde_json;
 
-        write!(f, "{}", name)
-    }
-}
+use wasm_bindgen::prelude::*;
+use web_sys::{js_sys::Array, *};
+
+// #[derive(PartialEq, serde::Deserialize, serde::Serialize)]
+// enum Language {
+//     /// Polish
+//     Pl,
+//     /// English
+//     En,
+// }
+
+// impl Display for Language {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         let name = match self {
+//             Language::Pl => "Polski",
+//             Language::En => "English",
+//         };
+
+//         write!(f, "{}", name)
+//     }
+// }
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -66,6 +75,16 @@ impl SvaUI {
         }
         Default::default()
     }
+
+    pub fn set_language(&mut self, language: Language) {
+        //TODO:
+        //self.vms.iter_mut().for_each(|vm| vm.set_language(language));
+
+        match language {
+            Language::Pl => self.vms.iter_mut().for_each(|vm| vm.set_language(Language::Pl)),
+            Language::En => self.vms.iter_mut().for_each(|vm| vm.set_language(Language::En)),
+        }
+    }
 }
 
 impl eframe::App for SvaUI {
@@ -94,14 +113,30 @@ impl eframe::App for SvaUI {
                 }
 
                 egui::widgets::global_dark_light_mode_buttons(ui);
-
+                ui.separator();
                 egui::ComboBox::from_label("")
-                    .selected_text(format!("{:?}", self.language.to_string()))
+                    .selected_text(format!("{:?}", self.language.string_code()))
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.language, Language::Pl, "Polski");
+                        ui.selectable_value(&mut self.language, Language::Pl, "Polski").changed();
                         ui.selectable_value(&mut self.language, Language::En, "English");
                     });
+                ui.separator();
+                ui.button("import");
+                ui.separator();
+                if ui.button("download").clicked() {
+                    ui.label("pressed");
+                    let serialized_state = serde_json::to_string(&self);
+
+                    match serialized_state {
+                        Ok(data) => ui.label(data),
+
+                        Err(err) => ui.label(err.to_string()),
+                    };
+                    //let mut file = File::create("state.json").unwrap();
+                }
+                ui.separator();
                 ui.heading("Simple virtual assembler ui");
+                ui.separator();
 
                 ui.menu_button("Add", |ui| {
                     if ui.button("vm").clicked() {
@@ -118,13 +153,12 @@ impl eframe::App for SvaUI {
 
             ui.separator();
 
-  
             for index in 0..self.vms.len() {
                 let vm = &mut self.vms[index];
                 vm.show(ctx, ui);
             }
-            
-           // self.vm_shell.show(ctx, ui);
+
+            // self.vm_shell.show(ctx, ui);
 
             ////
 
