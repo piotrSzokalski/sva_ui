@@ -48,6 +48,7 @@ use web_sys::{js_sys::Array, *};
 pub struct SvaUI {
     language: Language,
     //vm_shell: SVAShell,
+    #[serde(skip)]
     vms: Vec<SVAShell>,
 }
 

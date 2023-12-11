@@ -1,26 +1,30 @@
 use std::default;
-
+use std::sync::Arc;
+use std::sync::Mutex;
 use eframe::glow::NONE;
+
 use egui::{containers::Window, widgets::Label, Context};
 use egui::{Align, Slider, TextEdit, Ui, Widget};
 
 use simple_virtual_assembler::assembler::parsing_err::ParsingError;
+use simple_virtual_assembler::components::port::Port;
 use simple_virtual_assembler::vm::instruction::Instruction;
-use simple_virtual_assembler::vm::virtual_machine::VirtualMachine;
+use simple_virtual_assembler::vm::virtual_machine::{VirtualMachine, VmStatus};
 
 use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 
 use simple_virtual_assembler::assembler::assembler::Assembler;
 
 use simple_virtual_assembler::language::Language;
-#[derive(serde::Deserialize, serde::Serialize)]
+//#[derive(serde::Deserialize, serde::Serialize)]
 pub struct SVAShell {
     /// Id
     id: i32,
     /// Tile
     title: String,
+
     /// Simple virtual machine
-    vm: VirtualMachine,
+    vm: Arc<Mutex<VirtualMachine>>,
     /// Assembler for simple virtual machine
     assembler: Assembler,
     /// Code before assembly
@@ -32,37 +36,45 @@ pub struct SVAShell {
     /// ( Currently useless ) Parsing error message
     parsing_error_msg: String,
     /// Language
-    language: Language
-    
+    language: Language,
+    /// 'Start' or 'Stop' text for button
+    control_button_text: String,
 }
 
-// impl Default for SVAShell {
-//     fn default() -> Self {
-//         Self {
-//             id: 0,
-//             sva: VirtualMachine::new(),
-//             code: String::new(),
-//             acc_label: String::new(),
-//             err_buffer: String::new(),
-//             assembler: Assembler::new(),
-//         }
-//     }
-// }
-
-impl SVAShell {
-    pub fn new(id: i32, title: String) -> SVAShell {
-        let mut s = SVAShell {
-            id,
-            title,
-            vm: VirtualMachine::new(),
+impl Default for SVAShell {
+    fn default() -> Self {
+        Self {
+            id: -1,
+            title: "BRAK".to_owned(),
+            vm: Arc::new(Mutex::new(VirtualMachine::new())),
             assembler: Assembler::new(),
             code: String::new(),
             program: Vec::new(),
 
             parsing_error_msg: String::new(),
             parsing_error: None,
-            language: Language::En
+            language: Language::En,
+            control_button_text: "Start".to_owned(),
+        }
+    }
+}
+
+impl SVAShell {
+    pub fn new(id: i32, title: String) -> SVAShell {
+        let mut s = SVAShell {
+            id,
+            title,
+            vm: Arc::new(Mutex::new(VirtualMachine::new())),
+            assembler: Assembler::new(),
+            code: String::new(),
+            program: Vec::new(),
+
+            parsing_error_msg: String::new(),
+            parsing_error: None,
+            language: Language::En,
+            control_button_text: "Start".to_owned(),
         };
+        s.vm.lock().unwrap().set_delay(1000);
         s.set_language(Language::Pl);
         s
     }
@@ -77,70 +89,105 @@ impl SVAShell {
     }
 
     pub fn show(&mut self, ctx: &Context, ui: &mut Ui) {
-        egui::Window::new( &self.id.to_string()).open(&mut true).show(ctx, |ui| {
-            ui.vertical(|ui| {});
+        egui::Window::new(&self.id.to_string())
+            .open(&mut true)
+            .show(ctx, |ui| {
+                ui.vertical(|ui| {});
 
-            ui.horizontal(|ui| {
-                if ui.button("run").clicked() {
-                    self.assemble_and_run();
+                ui.horizontal(|ui| {
+                    if ui.button("run").clicked() {
+                        self.assemble_and_run();
+                    }
+                    if ui.button("step").clicked() {
+                        self.step();
+                    }
+
+                    if self.vm.lock().unwrap().get_status() == VmStatus::Running {
+                        self.control_button_text = "Stop".to_owned();
+                    }
+
+                    if ui.button(&self.control_button_text).clicked() {
+                        //DEALOCK 
+                        {   
+                            self.vm.lock().unwrap().set_delay(1000);
+                        }
+                        
+                        VirtualMachine::start(self.vm.clone());
+                    }
+
+                    //assemble_and_run(&mut self.vm, &self.code, &mut self.tex_t);
+                });
+                egui::ScrollArea::vertical()
+                    .max_height(600.0)
+                    .show(ui, |ui| {
+                        if ui.text_edit_multiline(&mut self.code).highlight().changed() {
+                            self.try_assemble_and_load();
+                        }
+                    });
+
+                if let Some(parsing_error) = &self.parsing_error {
+                    // ui.label(parsing_error.to_string());
+                    ui.label(
+                        egui::RichText::new(parsing_error.to_string())
+                            .color(egui::Color32::from_rgb(255, 0, 0)),
+                    );
                 }
-                if ui.button("step").clicked() {
-                    self.step();
-                }
 
-
-                //assemble_and_run(&mut self.vm, &self.code, &mut self.tex_t);
-            });
-            egui::ScrollArea::vertical()
-                .max_height(600.0)
-                .show(ui, |ui| {
-                    CodeEditor::default()
-                        .id_source("code editor")
-                        .with_rows(12)
-                        .with_fontsize(12.0)
-                        .with_theme(ColorTheme::GRUVBOX)
-                        .with_syntax(Syntax::rust())
-                        .with_numlines(true)
-                        .show(ui, &mut self.code);
+                ui.horizontal(|ui| {
+                    ui.label("acc");
+                    {ui.button(self.vm.lock().unwrap().get_acc().to_string());}
+                    ui.label("pc");
+                    ui.button(self.vm.lock().unwrap().get_pc().to_string());
+                    ui.label("flag");
+                    ui.button(self.vm.lock().unwrap().get_flag().to_string());
                 });
 
-            if let Some(parsing_error) = &self.parsing_error {
-                // ui.label(parsing_error.to_string());
-                ui.label(
-                    egui::RichText::new(parsing_error.to_string())
-                        .color(egui::Color32::from_rgb(255, 0, 0)),
-                );
-            }
+                ui.horizontal(|ui| {
+                    ui.label("r 0-3");
+                   { ui.button(format!("{:?}", self.vm.lock().unwrap().get_registers()));}
+                });
 
-            ui.horizontal(|ui| {
-                ui.label("acc");
-                ui.button(self.vm.get_acc().to_string());
-                ui.label("pc");
-                ui.button(self.vm.get_pc().to_string());
-                ui.label("flag");
-                ui.button(self.vm.get_flag().to_string());
+                ui.vertical(|ui| {
+                    ui.label("p 0-3");
+                    for p in self.vm.lock().unwrap().get_ports() {
+                        if ui.button(format!("{:?}", p)).clicked() {
+                            // match p {
+                            //     Port::Connected(_) => self.connect_port(p),
+                            //     Port::Disconnected(_) => self.disconnect_port(p),
+                            // }
+                        }
+                    }
+
+                    //ui.button(format!("{:?}", self.vm.get_ports()));
+                });
+
+                //ui.label(self.vm.to_string());
             });
-
-            ui.horizontal(|ui| {
-                ui.label("r 0-3");
-                ui.button(format!("{:?}", self.vm.get_registers()));
-                ui.label("p 0-3");
-                ui.button(format!("{:?}", self.vm.get_ports()));
-            });
-
-            ui.label(self.vm.to_string());
-        });
     }
 
-    /// Assembles code to instructions and loads them to vm
-    fn assemble_and_load(&mut self) {
+    /// Draws connection to mouse
+    fn draw_connection_to_mouse(&mut self) {
+        
+    }
+    /// Handles connecting ports, draws connection
+    fn connect_port(&mut self, port: Port) {
+        self.draw_connection_to_mouse();
+    }
+    /// Handles disconnecting ports
+    fn disconnect_port(&mut self, port: Port) {}
+
+    /// Assembles code supposed to be used in parent 'screen'
+    pub fn assemble(&mut self) {}
+
+    /// Tries Assembles code to instructions and loads them to vm
+    pub fn try_assemble_and_load(&mut self) {
         let res = self.assembler.parse(&self.code);
 
         match res {
             Ok(program) => {
                 //TODO:
                 //temp
-                self.vm = VirtualMachine::new_with_program(program);
+                self.vm = Arc::new(Mutex::new(VirtualMachine::new_with_program(program)));
                 //self.vm.load_program(program);
                 self.parsing_error = None
             }
@@ -149,18 +196,17 @@ impl SVAShell {
     }
     /// Execute one instruction
     fn step(&mut self) {
-
-        if self.vm.get_program().is_empty() {
-            self.assemble_and_load();
+        if self.vm.lock().unwrap().get_program().is_empty() {
+            self.try_assemble_and_load();
         }
-        if self.vm.get_pc() >= self.vm.get_program().len() {
-            self.vm.reset_pc();
+        if self.vm.lock().unwrap().get_pc() >= self.vm.lock().unwrap().get_program().len() {
+            self.vm.lock().unwrap().reset_pc();
         }
 
         match self.parsing_error {
             Some(_) => todo!(),
             None => {
-                self.vm.execute();
+                self.vm.lock().unwrap().execute();
             }
         }
     }
@@ -172,7 +218,7 @@ impl SVAShell {
             None => {
                 //self.vm.load_program(self.program.clone());
                 //self.vm.load_program(self.program);
-                self.vm.run()
+                self.vm.lock().unwrap().run()
             }
         }
     }
@@ -181,7 +227,7 @@ impl SVAShell {
     fn assemble_and_run(&mut self) {
         println!("test");
 
-        self.assemble_and_load();
+        self.try_assemble_and_load();
 
         if let Some(_parsing_error) = &self.parsing_error {
             self.title = "test".to_owned();
