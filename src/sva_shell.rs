@@ -118,36 +118,6 @@ impl SVAShell {
             .show(ctx, |ui| {
                 ui.vertical(|ui| {});
                 ui.add(egui::Slider::new(&mut self.delay_ms, 1..=5000).text("delay"));
-                ui.horizontal(|ui| {
-                    // if ui.button("run").clicked() {
-                    //     self.assemble_and_run();
-                    // }
-                    if ui.button("step").clicked() {
-                        self.step();
-                    }
-
-                    if self.vm.lock().unwrap().get_status() == VmStatus::Running {
-                        self.control_button_text = "Stop".to_owned();
-                    }
-
-                    if ui.button(&self.control_button_text).clicked() {
-                        //DEALOCK
-                        {
-                            self.vm.lock().unwrap().set_delay(self.delay_ms.try_into().unwrap());
-                        }
-
-                        VirtualMachine::start(self.vm.clone());
-                    }
-
-                    //assemble_and_run(&mut self.vm, &self.code, &mut self.tex_t);
-                });
-                egui::ScrollArea::vertical()
-                    .max_height(600.0)
-                    .show(ui, |ui| {
-                        if ui.text_edit_multiline(&mut self.code).highlight().changed() {
-                            self.try_assemble_and_load();
-                        }
-                    });
 
                 if let Some(parsing_error) = &self.parsing_error {
                     // ui.label(parsing_error.to_string());
@@ -155,7 +125,42 @@ impl SVAShell {
                         egui::RichText::new(parsing_error.to_string())
                             .color(egui::Color32::from_rgb(255, 0, 0)),
                     );
+                } else {
+                    ui.horizontal(|ui| {
+                        // if ui.button("run").clicked() {
+                        //     self.assemble_and_run();
+                        // }
+                        if ui.button("step").clicked() {
+                            self.step();
+                        }
+
+                        if self.vm.lock().unwrap().get_status() == VmStatus::Running {
+                            self.control_button_text = "Stop".to_owned();
+                        }
+
+                        if ui.button(&self.control_button_text).clicked() {
+                            //DEALOCK
+                            {
+                                self.vm
+                                    .lock()
+                                    .unwrap()
+                                    .set_delay(self.delay_ms.try_into().unwrap());
+                            }
+
+                            VirtualMachine::start(self.vm.clone());
+                        }
+
+                        //assemble_and_run(&mut self.vm, &self.code, &mut self.tex_t);
+                    });
                 }
+
+                egui::ScrollArea::vertical()
+                    .max_height(600.0)
+                    .show(ui, |ui| {
+                        if ui.text_edit_multiline(&mut self.code).highlight().changed() {
+                            self.try_assemble_and_load();
+                        }
+                    });
 
                 ui.horizontal(|ui| {
                     ui.label("acc");
@@ -246,14 +251,20 @@ impl SVAShell {
             Err(err) => self.parsing_error = Some(err),
         }
     }
-    /// Execute one instruction
+    /// Execute one instruction FIXME:
     fn step(&mut self) {
-        if self.vm.lock().unwrap().get_program().is_empty() {
-            self.try_assemble_and_load();
+        // if self.vm.lock().unwrap().get_program().is_empty() {
+        //     self.try_assemble_and_load();
+        // }
+
+        {
+            let mut vm =self.vm.lock().unwrap();
+            if vm.get_pc() >= vm.get_program().len() {
+                vm.reset_pc();
+            }
         }
-        if self.vm.lock().unwrap().get_pc() >= self.vm.lock().unwrap().get_program().len() {
-            self.vm.lock().unwrap().reset_pc();
-        }
+       
+        
 
         match self.parsing_error {
             Some(_) => todo!(),
