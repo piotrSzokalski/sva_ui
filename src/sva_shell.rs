@@ -117,7 +117,7 @@ impl SVAShell {
             .open(&mut true)
             .show(ctx, |ui| {
                 ui.vertical(|ui| {});
-                ui.add(egui::Slider::new(&mut self.delay_ms, 1..=5000).text("delay"));
+                ui.add(egui::Slider::new(&mut self.delay_ms, 0..=5000).text("delay"));
 
                 if let Some(parsing_error) = &self.parsing_error {
                     // ui.label(parsing_error.to_string());
@@ -130,37 +130,91 @@ impl SVAShell {
                         // if ui.button("run").clicked() {
                         //     self.assemble_and_run();
                         // }
-                        if ui.button("step").clicked() {
-                            self.step();
+
+                        let vm_status;
+
+                        {
+                            vm_status = self.vm.lock().unwrap().get_status();
                         }
 
-                        if self.vm.lock().unwrap().get_status() == VmStatus::Running {
+                        if vm_status == VmStatus::Running {
                             self.control_button_text = "Stop".to_owned();
                         }
 
+                        match vm_status {
+                            VmStatus::Initial => self.control_button_text = "Start".to_owned(),
+                            VmStatus::Running => self.control_button_text = "Stop".to_owned(),
+                            VmStatus::Stopped => self.control_button_text = "Resume".to_owned(),
+                            VmStatus::Finished => self.control_button_text = "Start".to_owned(),
+                        }
+
+                        if vm_status == VmStatus::Running || vm_status == VmStatus::Stopped {
+                            if ui.button("Halt").clicked() {
+                                VirtualMachine::halt(self.vm.clone());
+                            }
+                        }
+
                         if ui.button(&self.control_button_text).clicked() {
-                            //DEALOCK
                             {
                                 self.vm
                                     .lock()
                                     .unwrap()
                                     .set_delay(self.delay_ms.try_into().unwrap());
                             }
-
-                            VirtualMachine::start(self.vm.clone());
+                            match vm_status {
+                                VmStatus::Initial => {
+                                    VirtualMachine::start(self.vm.clone());
+                                }
+                                VmStatus::Running => {
+                                    VirtualMachine::stop(self.vm.clone());
+                                }
+                                VmStatus::Stopped => {
+                                    VirtualMachine::resume(self.vm.clone());
+                                }
+                                VmStatus::Finished => {
+                                    VirtualMachine::start(self.vm.clone());
+                                }
+                            }
                         }
 
                         //assemble_and_run(&mut self.vm, &self.code, &mut self.tex_t);
+
+                        if ui.button("step").clicked() {
+                            self.step();
+                        }
                     });
                 }
 
-                egui::ScrollArea::vertical()
-                    .max_height(600.0)
-                    .show(ui, |ui| {
-                        if ui.text_edit_multiline(&mut self.code).highlight().changed() {
-                            self.try_assemble_and_load();
-                        }
-                    });
+                //
+                let id = ui.make_persistent_id("Vm code heder");
+                egui::collapsing_header::CollapsingState::load_with_default_open(
+                    ui.ctx(),
+                    id,
+                    false,
+                )
+                .show_header(ui, |ui| {
+                    ui.heading("Code");
+                })
+                .body(|ui| {
+                    egui::ScrollArea::vertical()
+                        .max_height(600.0)
+                        .show(ui, |ui| {
+                            if ui.text_edit_multiline(&mut self.code).highlight().changed() {
+                                self.try_assemble_and_load();
+                            }
+                        });
+                });
+                //
+
+                // ui.collapsing("code", |ui| {
+                //     egui::ScrollArea::vertical()
+                //         .max_height(600.0)
+                //         .show(ui, |ui| {
+                //             if ui.text_edit_multiline(&mut self.code).highlight().changed() {
+                //                 self.try_assemble_and_load();
+                //             }
+                //         });
+                // });
 
                 ui.horizontal(|ui| {
                     ui.label("acc");
@@ -187,6 +241,7 @@ impl SVAShell {
                     {
                         ports = self.vm.lock().unwrap().get_ports();
                     }
+                    let mut index = 0;
                     for p in ports {
                         if ui.button(format!("{:?}", p)).clicked() {
                             let mut conn_started = self.connection_started.borrow_mut();
@@ -199,7 +254,7 @@ impl SVAShell {
                                 {
                                     //TODO:
                                     // Change to apposite  index
-                                    self.vm.lock().unwrap().connect(0, &mut conn);
+                                    self.vm.lock().unwrap().connect(index, &mut conn);
                                 }
                                 self.connections.borrow_mut().push(conn);
                             } else {
@@ -207,10 +262,13 @@ impl SVAShell {
                                 let connections = &mut self.connections.borrow_mut();
                                 if let Some(mut conn) = connections.last_mut() {
                                     {
-                                        self.vm.lock().unwrap().connect(0, &mut conn);
+                                        self.vm.lock().unwrap().connect(index, &mut conn);
                                     }
                                 }
                             }
+                        }
+                        if (index < 4) {
+                            index += 1;
                         }
                     }
 
@@ -258,13 +316,11 @@ impl SVAShell {
         // }
 
         {
-            let mut vm =self.vm.lock().unwrap();
+            let mut vm = self.vm.lock().unwrap();
             if vm.get_pc() >= vm.get_program().len() {
                 vm.reset_pc();
             }
         }
-       
-        
 
         match self.parsing_error {
             Some(_) => todo!(),

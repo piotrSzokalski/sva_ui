@@ -56,6 +56,7 @@ pub struct SvaUI {
     vms: Vec<SVAShell>,
     connections: Rc<RefCell<Vec<Connection>>>,
     connection_started: Rc<RefCell<bool>>,
+    ui_size: f32,
 }
 
 impl Default for SvaUI {
@@ -67,6 +68,7 @@ impl Default for SvaUI {
             vms: Vec::new(),
             connections: Rc::new(RefCell::new(Vec::new())),
             connection_started: Rc::new(RefCell::new(false)),
+            ui_size: 1.0,
         }
     }
 }
@@ -113,6 +115,8 @@ impl eframe::App for SvaUI {
         // Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
         // For inspiration and more examples, go to https://emilk.github.io/egui
 
+        ctx.set_pixels_per_point(self.ui_size);
+
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
 
@@ -120,6 +124,20 @@ impl eframe::App for SvaUI {
                 #[cfg(not(target_arch = "wasm32"))] // no File->Quit on web pages!
                 {
                     ui.menu_button("File", |ui| {
+                        if ui.button("import").clicked() {}
+
+                        if ui.button("export").clicked() {
+                            ui.label("pressed");
+                            let serialized_state = serde_json::to_string(&self);
+
+                            match serialized_state {
+                                Ok(data) => ui.label(data),
+
+                                Err(err) => ui.label(err.to_string()),
+                            };
+                            //let mut file = File::create("state.json").unwrap();
+                        }
+
                         if ui.button("Quit").clicked() {
                             _frame.close();
                         }
@@ -137,19 +155,9 @@ impl eframe::App for SvaUI {
                         ui.selectable_value(&mut self.language, Language::En, "English");
                     });
                 ui.separator();
-                ui.button("import");
+                ui.add(egui::Slider::new(&mut self.ui_size, 0.5..=3.0).step_by(0.25).text("delay"));
                 ui.separator();
-                if ui.button("export").clicked() {
-                    ui.label("pressed");
-                    let serialized_state = serde_json::to_string(&self);
 
-                    match serialized_state {
-                        Ok(data) => ui.label(data),
-
-                        Err(err) => ui.label(err.to_string()),
-                    };
-                    //let mut file = File::create("state.json").unwrap();
-                }
                 ui.separator();
                 ui.heading("Simple virtual assembler ui");
                 ui.separator();
