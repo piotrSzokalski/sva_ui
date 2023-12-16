@@ -1,12 +1,16 @@
+use std::cell::{Ref, RefCell};
+use std::rc::Rc;
 use std::{fmt::Display, fs::File};
 
 use egui::Button;
 use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 
-use simple_virtual_assembler::assembler::assembler::Assembler;
 use simple_virtual_assembler::assembler::parsing_err::ParsingError;
 use simple_virtual_assembler::vm::instruction::Instruction;
 use simple_virtual_assembler::vm::virtual_machine::VirtualMachine;
+use simple_virtual_assembler::{
+    assembler::assembler::Assembler, components::connection::Connection,
+};
 
 use simple_virtual_assembler::language::Language;
 
@@ -50,6 +54,8 @@ pub struct SvaUI {
     //vm_shell: SVAShell,
     #[serde(skip)]
     vms: Vec<SVAShell>,
+    connections: Rc<RefCell<Vec<Connection>>>,
+    connection_started: Rc<RefCell<bool>>,
 }
 
 impl Default for SvaUI {
@@ -59,6 +65,8 @@ impl Default for SvaUI {
             // vm_shell: SVAShell::new(0, "First VM window".to_string()),
             language: Language::En,
             vms: Vec::new(),
+            connections: Rc::new(RefCell::new(Vec::new())),
+            connection_started: Rc::new(RefCell::new(false)),
         }
     }
 }
@@ -82,8 +90,14 @@ impl SvaUI {
         //self.vms.iter_mut().for_each(|vm| vm.set_language(language));
 
         match language {
-            Language::Pl => self.vms.iter_mut().for_each(|vm| vm.set_language(Language::Pl)),
-            Language::En => self.vms.iter_mut().for_each(|vm| vm.set_language(Language::En)),
+            Language::Pl => self
+                .vms
+                .iter_mut()
+                .for_each(|vm| vm.set_language(Language::Pl)),
+            Language::En => self
+                .vms
+                .iter_mut()
+                .for_each(|vm| vm.set_language(Language::En)),
         }
     }
 }
@@ -118,13 +132,14 @@ impl eframe::App for SvaUI {
                 egui::ComboBox::from_label("")
                     .selected_text(format!("{:?}", self.language.string_code()))
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.language, Language::Pl, "Polski").changed();
+                        ui.selectable_value(&mut self.language, Language::Pl, "Polski")
+                            .changed();
                         ui.selectable_value(&mut self.language, Language::En, "English");
                     });
                 ui.separator();
                 ui.button("import");
                 ui.separator();
-                if ui.button("download").clicked() {
+                if ui.button("export").clicked() {
                     ui.label("pressed");
                     let serialized_state = serde_json::to_string(&self);
 
@@ -142,10 +157,23 @@ impl eframe::App for SvaUI {
                 ui.menu_button("Add", |ui| {
                     if ui.button("vm").clicked() {
                         let id = self.vms.last().map_or(0, |last| last.get_id() + 1);
-                        let mut x = SVAShell::new(id, "Vm".to_string());
+                        let mut x = SVAShell::new(
+                            id,
+                            "Vm".to_string(),
+                            self.connection_started.clone(),
+                            self.connections.clone(),
+                        );
                         self.vms.push(x);
                     }
-                })
+                });
+
+                ui.label(self.connection_started.borrow_mut().to_string());
+
+                if *self.connection_started.borrow_mut() {
+                    ui.label("Connecting");
+                } else {
+                    ui.label("<><><><>");
+                }
             });
         });
 
