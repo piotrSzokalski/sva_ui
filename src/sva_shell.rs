@@ -49,6 +49,9 @@ pub struct SVAShell {
 
     /// Connections
     connections: Rc<RefCell<Vec<Connection>>>,
+
+    ///Delay ms
+    delay_ms: u64,
 }
 
 impl Default for SVAShell {
@@ -67,6 +70,7 @@ impl Default for SVAShell {
             control_button_text: "Start".to_owned(),
             connection_started: Rc::new(RefCell::new(false)),
             connections: Rc::new(RefCell::new(Vec::new())),
+            delay_ms: 1000,
         }
     }
 }
@@ -92,6 +96,7 @@ impl SVAShell {
             control_button_text: "Start".to_owned(),
             connection_started,
             connections,
+            delay_ms: 1000,
         };
         s.vm.lock().unwrap().set_delay(1000);
         s.set_language(Language::Pl);
@@ -112,11 +117,11 @@ impl SVAShell {
             .open(&mut true)
             .show(ctx, |ui| {
                 ui.vertical(|ui| {});
-
+                ui.add(egui::Slider::new(&mut self.delay_ms, 1..=5000).text("delay"));
                 ui.horizontal(|ui| {
-                    if ui.button("run").clicked() {
-                        self.assemble_and_run();
-                    }
+                    // if ui.button("run").clicked() {
+                    //     self.assemble_and_run();
+                    // }
                     if ui.button("step").clicked() {
                         self.step();
                     }
@@ -128,7 +133,7 @@ impl SVAShell {
                     if ui.button(&self.control_button_text).clicked() {
                         //DEALOCK
                         {
-                            self.vm.lock().unwrap().set_delay(1000);
+                            self.vm.lock().unwrap().set_delay(self.delay_ms.try_into().unwrap());
                         }
 
                         VirtualMachine::start(self.vm.clone());
