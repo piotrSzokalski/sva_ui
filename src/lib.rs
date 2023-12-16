@@ -2,8 +2,7 @@
 
 mod app;
 mod sva_shell;
-mod test;
-mod test_window;
+mod help_window;
 
 pub use app::SvaUI;
 

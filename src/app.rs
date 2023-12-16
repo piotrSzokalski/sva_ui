@@ -15,10 +15,7 @@ use simple_virtual_assembler::{
 use simple_virtual_assembler::language::Language;
 
 use crate::sva_shell::SVAShell;
-
-use crate::test_window::TetsWindow;
-
-use crate::test::abc;
+use crate::help_window::HelpWindow;
 
 use serde::{Deserialize, Serialize};
 
@@ -57,6 +54,7 @@ pub struct SvaUI {
     connections: Rc<RefCell<Vec<Connection>>>,
     connection_started: Rc<RefCell<bool>>,
     ui_size: f32,
+    help_widow: HelpWindow
 }
 
 impl Default for SvaUI {
@@ -69,6 +67,7 @@ impl Default for SvaUI {
             connections: Rc::new(RefCell::new(Vec::new())),
             connection_started: Rc::new(RefCell::new(false)),
             ui_size: 1.0,
+            help_widow: HelpWindow { is_open: false },
         }
     }
 }
@@ -182,6 +181,12 @@ impl eframe::App for SvaUI {
                 } else {
                     ui.label("<><><><>");
                 }
+
+                if ui.button("Help").clicked() {
+                    self.help_widow.toggle_open_close();
+                }
+
+                self.help_widow.show(ctx, ui);
             });
         });
 
