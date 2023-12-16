@@ -1,12 +1,16 @@
+use eframe::glow::NONE;
+use std::cell::Ref;
+use std::cell::RefCell;
 use std::default;
+use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::Mutex;
-use eframe::glow::NONE;
 
 use egui::{containers::Window, widgets::Label, Context};
 use egui::{Align, Slider, TextEdit, Ui, Widget};
 
 use simple_virtual_assembler::assembler::parsing_err::ParsingError;
+use simple_virtual_assembler::components::connection::Connection;
 use simple_virtual_assembler::components::port::Port;
 use simple_virtual_assembler::vm::instruction::Instruction;
 use simple_virtual_assembler::vm::virtual_machine::{VirtualMachine, VmStatus};
@@ -39,6 +43,12 @@ pub struct SVAShell {
     language: Language,
     /// 'Start' or 'Stop' text for button
     control_button_text: String,
+
+    /// Connecting in progress
+    connection_started: Rc<RefCell<bool>>,
+
+    /// Connections
+    connections: Rc<RefCell<Vec<Connection>>>,
 }
 
 impl Default for SVAShell {
@@ -55,12 +65,19 @@ impl Default for SVAShell {
             parsing_error: None,
             language: Language::En,
             control_button_text: "Start".to_owned(),
+            connection_started: Rc::new(RefCell::new(false)),
+            connections: Rc::new(RefCell::new(Vec::new())),
         }
     }
 }
 
 impl SVAShell {
-    pub fn new(id: i32, title: String) -> SVAShell {
+    pub fn new(
+        id: i32,
+        title: String,
+        connection_started: Rc<RefCell<bool>>,
+        connections: Rc<RefCell<Vec<Connection>>>,
+    ) -> SVAShell {
         let mut s = SVAShell {
             id,
             title,
@@ -73,6 +90,8 @@ impl SVAShell {
             parsing_error: None,
             language: Language::En,
             control_button_text: "Start".to_owned(),
+            connection_started,
+            connections,
         };
         s.vm.lock().unwrap().set_delay(1000);
         s.set_language(Language::Pl);
@@ -107,11 +126,11 @@ impl SVAShell {
                     }
 
                     if ui.button(&self.control_button_text).clicked() {
-                        //DEALOCK 
-                        {   
+                        //DEALOCK
+                        {
                             self.vm.lock().unwrap().set_delay(1000);
                         }
-                        
+
                         VirtualMachine::start(self.vm.clone());
                     }
 
@@ -135,7 +154,9 @@ impl SVAShell {
 
                 ui.horizontal(|ui| {
                     ui.label("acc");
-                    {ui.button(self.vm.lock().unwrap().get_acc().to_string());}
+                    {
+                        ui.button(self.vm.lock().unwrap().get_acc().to_string());
+                    }
                     ui.label("pc");
                     ui.button(self.vm.lock().unwrap().get_pc().to_string());
                     ui.label("flag");
@@ -144,17 +165,42 @@ impl SVAShell {
 
                 ui.horizontal(|ui| {
                     ui.label("r 0-3");
-                   { ui.button(format!("{:?}", self.vm.lock().unwrap().get_registers()));}
+                    {
+                        ui.button(format!("{:?}", self.vm.lock().unwrap().get_registers()));
+                    }
                 });
 
                 ui.vertical(|ui| {
                     ui.label("p 0-3");
-                    for p in self.vm.lock().unwrap().get_ports() {
+                    let ports;
+
+                    {
+                        ports = self.vm.lock().unwrap().get_ports();
+                    }
+                    for p in ports {
                         if ui.button(format!("{:?}", p)).clicked() {
-                            // match p {
-                            //     Port::Connected(_) => self.connect_port(p),
-                            //     Port::Disconnected(_) => self.disconnect_port(p),
-                            // }
+                            let mut conn_started = self.connection_started.borrow_mut();
+                            println!("{}", conn_started.to_string());
+                            if *conn_started {
+                                *conn_started = false;
+
+                                let mut conn = Connection::new();
+
+                                {
+                                    //TODO:
+                                    // Change to apposite  index
+                                    self.vm.lock().unwrap().connect(0, &mut conn);
+                                }
+                                self.connections.borrow_mut().push(conn);
+                            } else {
+                                *conn_started = true;
+                                let connections = &mut self.connections.borrow_mut();
+                                if let Some(mut conn) = connections.last_mut() {
+                                    {
+                                        self.vm.lock().unwrap().connect(0, &mut conn);
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -166,9 +212,7 @@ impl SVAShell {
     }
 
     /// Draws connection to mouse
-    fn draw_connection_to_mouse(&mut self) {
-        
-    }
+    fn draw_connection_to_mouse(&mut self) {}
     /// Handles connecting ports, draws connection
     fn connect_port(&mut self, port: Port) {
         self.draw_connection_to_mouse();
@@ -187,7 +231,10 @@ impl SVAShell {
             Ok(program) => {
                 //TODO:
                 //temp
-                self.vm = Arc::new(Mutex::new(VirtualMachine::new_with_program(program)));
+                //self.vm = Arc::new(Mutex::new(VirtualMachine::new_with_program(program)));
+                {
+                    self.vm.lock().unwrap().load_program(program);
+                }
                 //self.vm.load_program(program);
                 self.parsing_error = None
             }
