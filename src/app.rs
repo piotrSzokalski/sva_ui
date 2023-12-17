@@ -181,10 +181,21 @@ impl eframe::App for SvaUI {
 
                     ui.label(self.connection_started.borrow_mut().to_string());
 
+                    if ui.button("connect").clicked() {
+                        let mut conn_started = self.connection_started.borrow_mut();
+                        *conn_started = !*conn_started;
+
+                        if *conn_started {
+                            let mut conn = Connection::new();
+
+                            self.connections.borrow_mut().push(conn);
+                        }
+                    }
+
                     if *self.connection_started.borrow_mut() {
-                        ui.label("Connecting");
+                        ctx.set_cursor_icon(egui::CursorIcon::Cell);
                     } else {
-                        ui.label("<><><><>");
+                        ctx.set_cursor_icon(egui::CursorIcon::Default);
                     }
 
                     if ui.button("Help").clicked() {
@@ -205,10 +216,6 @@ impl eframe::App for SvaUI {
                 let vm = &mut self.vms[index];
                 vm.show(ctx, ui);
             }
-
-            // self.vm_shell.show(ctx, ui);
-
-            ////
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 powered_by_egui_and_eframe(ui);

@@ -118,11 +118,15 @@ impl SVAShell {
             .open(&mut true)
             .show(ctx, |ui| {
                 ui.vertical(|ui| {});
-                if ui.add(egui::Slider::new(&mut self.delay_ms, 0..=5000).text("delay")).changed() {
-                    self.vm.lock().unwrap().set_delay(self.delay_ms.try_into().unwrap());
+                if ui
+                    .add(egui::Slider::new(&mut self.delay_ms, 0..=5000).text("delay"))
+                    .changed()
+                {
+                    self.vm
+                        .lock()
+                        .unwrap()
+                        .set_delay(self.delay_ms.try_into().unwrap());
                 }
-                    
-                
 
                 if let Some(parsing_error) = &self.parsing_error {
                     // ui.label(parsing_error.to_string());
@@ -186,6 +190,9 @@ impl SVAShell {
 
                         if ui.button("step").clicked() {
                             self.step();
+                        }
+                        if ui.button("reset").clicked() {
+                            self.vm.lock().unwrap().clear_registers();
                         }
                     });
                 }
@@ -251,25 +258,18 @@ impl SVAShell {
                         if ui.button(format!("{:?}", p)).clicked() {
                             let mut conn_started = self.connection_started.borrow_mut();
                             println!("{}", conn_started.to_string());
-                            if *conn_started {
-                                *conn_started = false;
 
-                                let mut conn = Connection::new();
-
+                            let connections = &mut self.connections.borrow_mut();
+                            if let Some(mut conn) = connections.last_mut() {
                                 {
-                                    //TODO:
-                                    // Change to apposite  index
                                     self.vm.lock().unwrap().connect(index, &mut conn);
                                 }
-                                self.connections.borrow_mut().push(conn);
+                            }
+
+                            if *conn_started {
+
                             } else {
-                                *conn_started = true;
-                                let connections = &mut self.connections.borrow_mut();
-                                if let Some(mut conn) = connections.last_mut() {
-                                    {
-                                        self.vm.lock().unwrap().connect(index, &mut conn);
-                                    }
-                                }
+
                             }
                         }
                         if (index < 4) {
@@ -282,12 +282,11 @@ impl SVAShell {
 
                 //ui.label(self.vm.to_string());
             });
-            if self.delay_ms > 10 {
-                ctx.request_repaint_after(Duration::from_millis(self.delay_ms));
-            } else {
-                ctx.request_repaint_after(Duration::from_millis(10));
-            }
-            
+        if self.delay_ms > 10 {
+            ctx.request_repaint_after(Duration::from_millis(self.delay_ms));
+        } else {
+            ctx.request_repaint_after(Duration::from_millis(10));
+        }
     }
 
     /// Draws connection to mouse
@@ -329,7 +328,7 @@ impl SVAShell {
         {
             let mut vm = self.vm.lock().unwrap();
             if vm.get_pc() >= vm.get_program().len() {
-                vm.reset_pc();
+                vm.clear_registers();
             }
         }
 
