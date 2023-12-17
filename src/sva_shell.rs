@@ -51,6 +51,9 @@ pub struct SVAShell {
     /// Connections
     connections: Rc<RefCell<Vec<Connection>>>,
 
+    /// Disconnect port on clikc
+    disconnect_mode: Rc<RefCell<bool>>,
+
     ///Delay ms
     delay_ms: u64,
 }
@@ -72,6 +75,7 @@ impl Default for SVAShell {
             connection_started: Rc::new(RefCell::new(false)),
             connections: Rc::new(RefCell::new(Vec::new())),
             delay_ms: 1000,
+            disconnect_mode: Rc::new(RefCell::new(false)),
         }
     }
 }
@@ -82,6 +86,7 @@ impl SVAShell {
         title: String,
         connection_started: Rc<RefCell<bool>>,
         connections: Rc<RefCell<Vec<Connection>>>,
+        disconnect_mode: Rc<RefCell<bool>>,
     ) -> SVAShell {
         let mut s = SVAShell {
             id,
@@ -98,9 +103,9 @@ impl SVAShell {
             connection_started,
             connections,
             delay_ms: 1000,
+            disconnect_mode,
         };
         s.vm.lock().unwrap().set_delay(1000);
-        s.set_language(Language::Pl);
         s
     }
 
@@ -257,22 +262,26 @@ impl SVAShell {
                     for p in ports {
                         if ui.button(format!("{:?}", p)).clicked() {
                             let mut conn_started = self.connection_started.borrow_mut();
-                            println!("{}", conn_started.to_string());
 
                             let connections = &mut self.connections.borrow_mut();
-                            if let Some(mut conn) = connections.last_mut() {
-                                {
-                                    self.vm.lock().unwrap().connect(index, &mut conn);
-                                }
-                            }
+
+                            let disconnect_mode = self.disconnect_mode.borrow_mut();
 
                             if *conn_started {
-
-                            } else {
-
+                                if let Some(mut conn) = connections.last_mut() {
+                                    {
+                                        self.vm.lock().unwrap().connect(index, &mut conn);
+                                    }
+                                }
+                            }
+                            if *disconnect_mode {
+                                {
+                                    self.vm.lock().unwrap().disconnect(index);
+                                    
+                                }
                             }
                         }
-                        if (index < 4) {
+                        if index < 4 {
                             index += 1;
                         }
                     }

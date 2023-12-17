@@ -53,6 +53,7 @@ pub struct SvaUI {
     vms: Vec<SVAShell>,
     connections: Rc<RefCell<Vec<Connection>>>,
     connection_started: Rc<RefCell<bool>>,
+    disconnect_mode: Rc<RefCell<bool>>,
     ui_size: f32,
     help_widow: HelpWindow,
 }
@@ -68,6 +69,7 @@ impl Default for SvaUI {
             connection_started: Rc::new(RefCell::new(false)),
             ui_size: 1.0,
             help_widow: HelpWindow { is_open: false },
+            disconnect_mode: Rc::new(RefCell::new(false)),
         }
     }
 }
@@ -174,28 +176,48 @@ impl eframe::App for SvaUI {
                                 "Vm".to_string(),
                                 self.connection_started.clone(),
                                 self.connections.clone(),
+                                self.disconnect_mode.clone(),
                             );
                             self.vms.push(x);
                         }
                     });
 
-                    ui.label(self.connection_started.borrow_mut().to_string());
+                    let mut connection_button_text = "connect";
+                    if !*self.disconnect_mode.borrow_mut() {
+                        if ui.button(connection_button_text).clicked() {
+                            let mut conn_started = self.connection_started.borrow_mut();
+                            *conn_started = !*conn_started;
 
-                    if ui.button("connect").clicked() {
-                        let mut conn_started = self.connection_started.borrow_mut();
-                        *conn_started = !*conn_started;
+                            *self.disconnect_mode.borrow_mut() = false;
 
-                        if *conn_started {
-                            let mut conn = Connection::new();
+                            if *conn_started {
+                                let mut conn = Connection::new();
 
-                            self.connections.borrow_mut().push(conn);
+                                self.connections.borrow_mut().push(conn);
+                            }
+                        }
+                    }
+
+                    let mut disconnect_button_text = "disconnect";
+                    if !*self.connection_started.borrow_mut() {
+                        if ui.button(disconnect_button_text).clicked() {
+                            let mut dissconnec_mode = self.disconnect_mode.borrow_mut();
+                            *dissconnec_mode = !*dissconnec_mode;
                         }
                     }
 
                     if *self.connection_started.borrow_mut() {
                         ctx.set_cursor_icon(egui::CursorIcon::Cell);
+                        connection_button_text = "Stop connecting";
+                        disconnect_button_text = "disconnect";
+                    } else if *self.disconnect_mode.borrow_mut() {
+                        ctx.set_cursor_icon(egui::CursorIcon::NotAllowed);
+                        disconnect_button_text = "stop disconnecting";
+                        connection_button_text = "connect";
                     } else {
                         ctx.set_cursor_icon(egui::CursorIcon::Default);
+                        connection_button_text = "connect";
+                        disconnect_button_text = "disconnect";
                     }
 
                     if ui.button("Help").clicked() {
