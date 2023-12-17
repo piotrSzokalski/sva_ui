@@ -49,7 +49,7 @@ opt-level = 2 # fast and small wasm
 opt-level = 2
 
 # Widget for code
-#egui_code_editor = "0.1.8"
+egui_code_editor = "0.1.9"
 
 [patch.crates-io]
 

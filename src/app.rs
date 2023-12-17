@@ -14,8 +14,8 @@ use simple_virtual_assembler::{
 
 use simple_virtual_assembler::language::Language;
 
-use crate::sva_shell::SVAShell;
 use crate::help_window::HelpWindow;
+use crate::sva_shell::SVAShell;
 
 use serde::{Deserialize, Serialize};
 
@@ -54,7 +54,7 @@ pub struct SvaUI {
     connections: Rc<RefCell<Vec<Connection>>>,
     connection_started: Rc<RefCell<bool>>,
     ui_size: f32,
-    help_widow: HelpWindow
+    help_widow: HelpWindow,
 }
 
 impl Default for SvaUI {
@@ -118,75 +118,81 @@ impl eframe::App for SvaUI {
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
+            egui::ScrollArea::horizontal().show(ui, |ui| {
+                egui::menu::bar(ui, |ui| {
+                    #[cfg(not(target_arch = "wasm32"))] // no File->Quit on web pages!
+                    {
+                        ui.menu_button("File", |ui| {
+                            if ui.button("import").clicked() {}
 
-            egui::menu::bar(ui, |ui| {
-                #[cfg(not(target_arch = "wasm32"))] // no File->Quit on web pages!
-                {
-                    ui.menu_button("File", |ui| {
-                        if ui.button("import").clicked() {}
+                            if ui.button("export").clicked() {
+                                ui.label("pressed");
+                                let serialized_state = serde_json::to_string(&self);
 
-                        if ui.button("export").clicked() {
-                            ui.label("pressed");
-                            let serialized_state = serde_json::to_string(&self);
+                                match serialized_state {
+                                    Ok(data) => ui.label(data),
 
-                            match serialized_state {
-                                Ok(data) => ui.label(data),
+                                    Err(err) => ui.label(err.to_string()),
+                                };
+                                //let mut file = File::create("state.json").unwrap();
+                            }
 
-                                Err(err) => ui.label(err.to_string()),
-                            };
-                            //let mut file = File::create("state.json").unwrap();
-                        }
-
-                        if ui.button("Quit").clicked() {
-                            _frame.close();
-                        }
-                    });
-                    ui.add_space(16.0);
-                }
-
-                egui::widgets::global_dark_light_mode_buttons(ui);
-                ui.separator();
-                egui::ComboBox::from_label("")
-                    .selected_text(format!("{:?}", self.language.string_code()))
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.language, Language::Pl, "Polski")
-                            .changed();
-                        ui.selectable_value(&mut self.language, Language::En, "English");
-                    });
-                ui.separator();
-                ui.add(egui::Slider::new(&mut self.ui_size, 0.5..=3.0).step_by(0.25).text("delay"));
-                ui.separator();
-
-                ui.separator();
-                ui.heading("Simple virtual assembler ui");
-                ui.separator();
-
-                ui.menu_button("Add", |ui| {
-                    if ui.button("vm").clicked() {
-                        let id = self.vms.last().map_or(0, |last| last.get_id() + 1);
-                        let mut x = SVAShell::new(
-                            id,
-                            "Vm".to_string(),
-                            self.connection_started.clone(),
-                            self.connections.clone(),
-                        );
-                        self.vms.push(x);
+                            if ui.button("Quit").clicked() {
+                                _frame.close();
+                            }
+                        });
+                        ui.add_space(16.0);
                     }
+
+                    egui::widgets::global_dark_light_mode_switch(ui);
+
+                    ui.separator();
+                    egui::ComboBox::from_label("")
+                        .selected_text(format!("{:?}", self.language.string_code()))
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(&mut self.language, Language::Pl, "Polski")
+                                .changed();
+                            ui.selectable_value(&mut self.language, Language::En, "English");
+                        });
+                    ui.separator();
+                    ui.add(
+                        egui::Slider::new(&mut self.ui_size, 0.5..=3.0)
+                            .step_by(0.25)
+                            .text("delay"),
+                    );
+                    ui.separator();
+
+                    ui.separator();
+                    ui.heading("Simple virtual assembler ui");
+                    ui.separator();
+
+                    ui.menu_button("Add", |ui| {
+                        if ui.button("vm").clicked() {
+                            let id = self.vms.last().map_or(0, |last| last.get_id() + 1);
+                            let mut x = SVAShell::new(
+                                id,
+                                "Vm".to_string(),
+                                self.connection_started.clone(),
+                                self.connections.clone(),
+                            );
+                            self.vms.push(x);
+                        }
+                    });
+
+                    ui.label(self.connection_started.borrow_mut().to_string());
+
+                    if *self.connection_started.borrow_mut() {
+                        ui.label("Connecting");
+                    } else {
+                        ui.label("<><><><>");
+                    }
+
+                    if ui.button("Help").clicked() {
+                        self.help_widow.toggle_open_close();
+                    }
+
+                    self.help_widow.show(ctx, ui);
                 });
-
-                ui.label(self.connection_started.borrow_mut().to_string());
-
-                if *self.connection_started.borrow_mut() {
-                    ui.label("Connecting");
-                } else {
-                    ui.label("<><><><>");
-                }
-
-                if ui.button("Help").clicked() {
-                    self.help_widow.toggle_open_close();
-                }
-
-                self.help_widow.show(ctx, ui);
             });
         });
 
