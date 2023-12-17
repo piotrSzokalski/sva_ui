@@ -5,6 +5,7 @@ use std::default;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::time::Duration;
 
 use egui::{containers::Window, widgets::Label, Context};
 use egui::{Align, Slider, TextEdit, Ui, Widget};
@@ -117,7 +118,11 @@ impl SVAShell {
             .open(&mut true)
             .show(ctx, |ui| {
                 ui.vertical(|ui| {});
-                ui.add(egui::Slider::new(&mut self.delay_ms, 0..=5000).text("delay"));
+                if ui.add(egui::Slider::new(&mut self.delay_ms, 0..=5000).text("delay")).changed() {
+                    self.vm.lock().unwrap().set_delay(self.delay_ms.try_into().unwrap());
+                }
+                    
+                
 
                 if let Some(parsing_error) = &self.parsing_error {
                     // ui.label(parsing_error.to_string());
@@ -277,6 +282,12 @@ impl SVAShell {
 
                 //ui.label(self.vm.to_string());
             });
+            if self.delay_ms > 10 {
+                ctx.request_repaint_after(Duration::from_millis(self.delay_ms));
+            } else {
+                ctx.request_repaint_after(Duration::from_millis(10));
+            }
+            
     }
 
     /// Draws connection to mouse
