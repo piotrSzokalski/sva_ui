@@ -1,6 +1,7 @@
 use eframe::glow::NONE;
 use egui::Button;
 use egui::Color32;
+use egui::Stroke;
 use std::cell::Ref;
 use std::cell::RefCell;
 use std::default;
@@ -61,7 +62,7 @@ pub struct SVAShell {
 
     current_color_for_connection: Color32,
 
-    port_colors: [Color32; 4]
+    port_colors: [Color32; 4],
 }
 
 impl Default for SVAShell {
@@ -83,12 +84,7 @@ impl Default for SVAShell {
             delay_ms: 1000,
             disconnect_mode: Rc::new(RefCell::new(false)),
             current_color_for_connection: Color32::GOLD,
-            port_colors: [
-                Color32::GRAY,
-                Color32::GRAY,
-                Color32::GRAY,
-                Color32::GRAY,
-            ],
+            port_colors: [Color32::GRAY, Color32::GRAY, Color32::GRAY, Color32::GRAY],
         }
     }
 }
@@ -100,7 +96,7 @@ impl SVAShell {
         connection_started: Rc<RefCell<bool>>,
         connections: Rc<RefCell<Vec<Connection>>>,
         disconnect_mode: Rc<RefCell<bool>>,
-        current_color_for_connection: Color32
+        current_color_for_connection: Color32,
     ) -> SVAShell {
         let mut s = SVAShell {
             id,
@@ -119,12 +115,7 @@ impl SVAShell {
             delay_ms: 1000,
             disconnect_mode,
             current_color_for_connection,
-            port_colors: [
-                Color32::GRAY,
-                Color32::GRAY,
-                Color32::GRAY,
-                Color32::GRAY,
-            ],
+            port_colors: [Color32::GRAY, Color32::GRAY, Color32::GRAY, Color32::GRAY],
         };
         s.vm.lock().unwrap().set_delay(1000);
         s
@@ -285,15 +276,12 @@ impl SVAShell {
                     }
                     let mut index = 0;
                     for p in ports {
-                       let b = egui::Button::new("text").fill(Color32::from_rgb(10, 100, 0));
-                    
-                        
-                        
-                       ui.add(b);
 
-                       
-
-                        let port_button = Button::new(format!("{:?}", p)).fill( *self.port_colors.get(index).unwrap_or(&Color32::GRAY));
+                        let port_button = Button::new(format!("{:?}", p)).stroke(Stroke::new(
+                            4.0,
+                            *self.port_colors.get(index).unwrap_or(&Color32::LIGHT_GRAY),
+                        ));
+                        
 
                         if ui.add_enabled(true, port_button).clicked() {
                             let mut conn_started = self.connection_started.borrow_mut();
@@ -313,10 +301,12 @@ impl SVAShell {
                                 self.port_colors[index] = self.current_color_for_connection;
                             }
                             if *disconnect_mode {
+                                // disconnect
                                 {
                                     self.vm.lock().unwrap().disconnect(index);
-                                    
                                 }
+                                // change color to default
+                                self.port_colors[index] = Color32::GRAY;
                             }
                         }
                         if index < 4 {

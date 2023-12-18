@@ -52,7 +52,7 @@ impl Default for SvaUI {
             vms: Vec::new(),
             connections: Rc::new(RefCell::new(Vec::new())),
             connection_started: Rc::new(RefCell::new(false)),
-            ui_size: 1.0,
+            ui_size: 1.25,
             help_widow: HelpWindow { is_open: false },
             disconnect_mode: Rc::new(RefCell::new(false)),
             port_connections_color_palle: initialize_colors(),
@@ -166,10 +166,6 @@ impl eframe::App for SvaUI {
                             .step_by(0.25)
                             .text("delay"),
                     );
-                    ui.separator();
-
-                    ui.separator();
-                    ui.heading("Simple virtual assembler ui");
                     ui.separator();
 
                     ui.menu_button("Add", |ui| {
