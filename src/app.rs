@@ -2,10 +2,11 @@ use std::cell::{Ref, RefCell};
 use std::rc::Rc;
 use std::{fmt::Display, fs::File};
 
-use egui::Button;
+use egui::{Button, Color32, Label, Stroke};
 use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 
 use simple_virtual_assembler::assembler::parsing_err::ParsingError;
+use simple_virtual_assembler::components::connection;
 use simple_virtual_assembler::vm::instruction::Instruction;
 use simple_virtual_assembler::vm::virtual_machine::VirtualMachine;
 use simple_virtual_assembler::{
@@ -37,6 +38,9 @@ pub struct SvaUI {
     disconnect_mode: Rc<RefCell<bool>>,
     ui_size: f32,
     help_widow: HelpWindow,
+
+    port_connections_color_palle: [Color32; 7],
+    current_port_connection_color_index: usize,
 }
 
 impl Default for SvaUI {
@@ -51,6 +55,8 @@ impl Default for SvaUI {
             ui_size: 1.0,
             help_widow: HelpWindow { is_open: false },
             disconnect_mode: Rc::new(RefCell::new(false)),
+            port_connections_color_palle: initialize_colors(),
+            current_port_connection_color_index: 0,
         }
     }
 }
@@ -82,6 +88,14 @@ impl SvaUI {
                 .vms
                 .iter_mut()
                 .for_each(|vm| vm.set_language(Language::En)),
+        }
+    }
+
+    fn switch_port_connection_color(&mut self) {
+        if self.current_port_connection_color_index < 6 {
+            self.current_port_connection_color_index += 1;
+        } else {
+            self.current_port_connection_color_index = 0;
         }
     }
 }
@@ -139,13 +153,16 @@ impl eframe::App for SvaUI {
                             {
                                 self.set_language(Language::Pl);
                             }
-                            if ui.selectable_value(&mut self.language, Language::En, "English").changed() {
+                            if ui
+                                .selectable_value(&mut self.language, Language::En, "English")
+                                .changed()
+                            {
                                 self.set_language(Language::En);
                             }
                         });
                     ui.separator();
                     ui.add(
-                        egui::Slider::new(&mut self.ui_size, 0.5..=3.0)
+                        egui::Slider::new(&mut self.ui_size, 0.75..=3.0)
                             .step_by(0.25)
                             .text("delay"),
                     );
@@ -164,34 +181,18 @@ impl eframe::App for SvaUI {
                                 self.connection_started.clone(),
                                 self.connections.clone(),
                                 self.disconnect_mode.clone(),
+                                *self
+                                    .port_connections_color_palle
+                                    .get(self.current_port_connection_color_index)
+                                    .unwrap_or(&Color32::BLUE),
                             );
                             self.vms.push(x);
                         }
                     });
 
                     let mut connection_button_text = "connect";
-                    if !*self.disconnect_mode.borrow_mut() {
-                        if ui.button(connection_button_text).clicked() {
-                            let mut conn_started = self.connection_started.borrow_mut();
-                            *conn_started = !*conn_started;
-
-                            *self.disconnect_mode.borrow_mut() = false;
-
-                            if *conn_started {
-                                let mut conn = Connection::new();
-
-                                self.connections.borrow_mut().push(conn);
-                            }
-                        }
-                    }
-
-                    let mut disconnect_button_text = "disconnect";
-                    if !*self.connection_started.borrow_mut() {
-                        if ui.button(disconnect_button_text).clicked() {
-                            let mut dissconnec_mode = self.disconnect_mode.borrow_mut();
-                            *dissconnec_mode = !*dissconnec_mode;
-                        }
-                    }
+                    let mut disconnect_button_text = "diconnect";
+                    let mut change_current_connection_color = false;
 
                     if *self.connection_started.borrow_mut() {
                         ctx.set_cursor_icon(egui::CursorIcon::Cell);
@@ -205,6 +206,45 @@ impl eframe::App for SvaUI {
                         ctx.set_cursor_icon(egui::CursorIcon::Default);
                         connection_button_text = "connect";
                         disconnect_button_text = "disconnect";
+                    }
+
+                    let start_connection_button =
+                        Button::new(connection_button_text).stroke(Stroke::new(
+                            4.0,
+                            self.port_connections_color_palle
+                                [self.current_port_connection_color_index],
+                        ));
+
+                    if !*self.disconnect_mode.borrow_mut() {
+                        if ui.add_enabled(true, start_connection_button).clicked() {
+                            let mut conn_started = self.connection_started.borrow_mut();
+                            *conn_started = !*conn_started;
+
+                            *self.disconnect_mode.borrow_mut() = false;
+
+                            if *conn_started {
+                                let mut conn = Connection::new();
+                                self.connections.borrow_mut().push(conn);
+                            } else {
+                                change_current_connection_color = true;
+                            }
+                        }
+                    }
+                    if change_current_connection_color {
+                        self.switch_port_connection_color();
+                    }
+
+                    // let ttt = Button::new(change_current_connection_color.to_string()).fill(
+                    //     self.port_connections_color_palle[self.current_port_connection_color_index],
+                    // );
+
+                    //ui.add(ttt);
+
+                    if !*self.connection_started.borrow_mut() {
+                        if ui.button(disconnect_button_text).clicked() {
+                            let mut dissconnec_mode = self.disconnect_mode.borrow_mut();
+                            *dissconnec_mode = !*dissconnec_mode;
+                        }
                     }
 
                     if ui.button("Help").clicked() {
@@ -223,6 +263,9 @@ impl eframe::App for SvaUI {
 
             for index in 0..self.vms.len() {
                 let vm = &mut self.vms[index];
+                vm.set_port_connection_color(
+                    self.port_connections_color_palle[self.current_port_connection_color_index],
+                );
                 vm.show(ctx, ui);
             }
 
@@ -246,4 +289,37 @@ fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
         );
         ui.label(".");
     });
+}
+/// TODO:
+/// choose an appriorpet colors
+fn initialize_colors() -> [Color32; 7] {
+    // [
+    //     Color32::RED,
+    //     Color32::BLUE,
+    //     Color32::GOLD,
+    //     Color32::GRAY,
+    //     Color32::KHAKI,
+    //     Color32::DEBUG_COLOR,
+    //     Color32::LIGHT_YELLOW,
+    // ]
+    //////////////
+    //  [
+    //     Color32::from_rgb(0, 128, 128),   // Teal
+    //     Color32::from_rgb(72, 209, 204),  // Medium Turquoise
+    //     Color32::from_rgb(0, 206, 209),   // Dark Turquoise
+    //     Color32::from_rgb(102, 205, 170), // Medium Aquamarine
+    //     Color32::from_rgb(32, 178, 170),  // Light Sea Green
+    //     Color32::from_rgb(95, 158, 160),  // Cadet Blue
+    //     Color32::from_rgb(64, 224, 208),  // Turquoise
+    // ]
+    ////////////////////
+    [
+        Color32::from_rgb(255, 87, 34),  // Red-Orange
+        Color32::from_rgb(63, 81, 181),  // Indigo
+        Color32::from_rgb(0, 150, 136),  // Teal
+        Color32::from_rgb(255, 193, 7),  // Amber
+        Color32::from_rgb(33, 150, 243), // Blue
+        Color32::from_rgb(103, 58, 183), // Deep Purple
+        Color32::from_rgb(76, 175, 80),  // Green
+    ]
 }
