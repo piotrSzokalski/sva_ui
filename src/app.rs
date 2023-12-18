@@ -38,7 +38,7 @@ pub struct SvaUI {
     disconnect_mode: Rc<RefCell<bool>>,
     ui_size: f32,
     help_widow: HelpWindow,
-
+    #[serde(skip)]
     port_connections_color_palle: [Color32; 7],
     current_port_connection_color_index: usize,
 }
@@ -107,7 +107,7 @@ impl eframe::App for SvaUI {
     }
 
     /// Called each time the UI needs repainting, which may be many times per second.
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &eframe::egui::Context, frame: &mut eframe::Frame) {
         // Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
         // For inspiration and more examples, go to https://emilk.github.io/egui
 
@@ -134,9 +134,9 @@ impl eframe::App for SvaUI {
                                 //let mut file = File::create("state.json").unwrap();
                             }
 
-                            if ui.button("Quit").clicked() {
-                                _frame.close();
-                            }
+                            // if ui.button("Quit").clicked() {
+                            //     _frame.close();
+                            // }
                         });
                         ui.add_space(16.0);
                     }
@@ -271,6 +271,8 @@ impl eframe::App for SvaUI {
             });
         });
     }
+
+
 }
 
 fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {

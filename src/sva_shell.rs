@@ -236,6 +236,15 @@ impl SVAShell {
                                 self.try_assemble_and_load();
                             }
                         });
+
+                    CodeEditor::default()
+                        .id_source("code editor")
+                        .with_rows(12)
+                        .with_fontsize(14.0)
+                        .with_theme(ColorTheme::GRUVBOX)
+                        .with_syntax(Syntax::rust())
+                        .with_numlines(true)
+                        .show(ui, &mut self.code);
                 });
                 //
 
@@ -276,12 +285,10 @@ impl SVAShell {
                     }
                     let mut index = 0;
                     for p in ports {
-
                         let port_button = Button::new(format!("{:?}", p)).stroke(Stroke::new(
                             4.0,
                             *self.port_colors.get(index).unwrap_or(&Color32::LIGHT_GRAY),
                         ));
-                        
 
                         if ui.add_enabled(true, port_button).clicked() {
                             let mut conn_started = self.connection_started.borrow_mut();
