@@ -237,19 +237,16 @@ impl SVAShell {
                             // }
 
                             CodeEditor::default()
-                            .id_source("code editor")
-                            .with_rows(12)
-                            .with_fontsize(14.0)
-                            .with_theme(ColorTheme::GRUVBOX)
-                            .with_syntax(Syntax::rust())
-                            .with_numlines(true)
-                            .show(ui, &mut self.code);
+                                .id_source("code editor")
+                                .with_rows(12)
+                                .with_fontsize(14.0)
+                                .with_theme(ColorTheme::GRUVBOX)
+                                .with_syntax(Syntax::rust())
+                                .with_numlines(true)
+                                .show(ui, &mut self.code);
                         });
 
-                        self.try_assemble_and_load();
-
-
-                    
+                    self.try_assemble_and_load();
                 });
                 //
 
