@@ -24,25 +24,6 @@ use serde_json;
 use wasm_bindgen::prelude::*;
 use web_sys::{js_sys::Array, *};
 
-// #[derive(PartialEq, serde::Deserialize, serde::Serialize)]
-// enum Language {
-//     /// Polish
-//     Pl,
-//     /// English
-//     En,
-// }
-
-// impl Display for Language {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         let name = match self {
-//             Language::Pl => "Polski",
-//             Language::En => "English",
-//         };
-
-//         write!(f, "{}", name)
-//     }
-// }
-
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
@@ -152,9 +133,15 @@ impl eframe::App for SvaUI {
                     egui::ComboBox::from_label("")
                         .selected_text(format!("{:?}", self.language.string_code()))
                         .show_ui(ui, |ui| {
-                            ui.selectable_value(&mut self.language, Language::Pl, "Polski")
-                                .changed();
-                            ui.selectable_value(&mut self.language, Language::En, "English");
+                            if ui
+                                .selectable_value(&mut self.language, Language::Pl, "Polski")
+                                .changed()
+                            {
+                                self.set_language(Language::Pl);
+                            }
+                            if ui.selectable_value(&mut self.language, Language::En, "English").changed() {
+                                self.set_language(Language::En);
+                            }
                         });
                     ui.separator();
                     ui.add(
@@ -231,7 +218,7 @@ impl eframe::App for SvaUI {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-
+            ui.label(self.language.to_string());
             ui.separator();
 
             for index in 0..self.vms.len() {
