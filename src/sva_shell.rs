@@ -24,7 +24,7 @@ use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 use simple_virtual_assembler::assembler::assembler::Assembler;
 
 use simple_virtual_assembler::language::Language;
-//#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(serde::Deserialize, serde::Serialize)]
 pub struct SVAShell {
     /// Id
     id: i32,
@@ -32,7 +32,7 @@ pub struct SVAShell {
     title: String,
 
     /// Simple virtual machine
-    vm: Arc<Mutex<VirtualMachine>>,
+    pub vm: Arc<Mutex<VirtualMachine>>,
     /// Assembler for simple virtual machine
     assembler: Assembler,
     /// Code before assembly
@@ -303,7 +303,14 @@ impl SVAShell {
                                 // connect port
                                 if let Some(mut conn) = connections.last_mut() {
                                     {
-                                        self.vm.lock().unwrap().connect(index, &mut conn);
+                                        let id = self.id.to_string() + "P" + &index.to_string();
+                                        
+                                        let a = String::from("a");
+                                        let b = String::from("b");
+
+                                        let c = a + &b;
+
+                                        self.vm.lock().unwrap().connect_with_id(index, &mut conn, id);
                                     }
                                 }
                                 // change background color

@@ -1,5 +1,7 @@
 use std::cell::{Ref, RefCell};
+use std::io::{BufWriter, Write};
 use std::rc::Rc;
+use std::time::Duration;
 use std::{fmt::Display, fs::File};
 
 use egui::{Button, Color32, Label, Stroke};
@@ -31,7 +33,7 @@ use web_sys::{js_sys::Array, *};
 pub struct SvaUI {
     language: Language,
     //vm_shell: SVAShell,
-    #[serde(skip)]
+    //#[serde(skip)]
     vms: Vec<SVAShell>,
     connections: Rc<RefCell<Vec<Connection>>>,
     connection_started: Rc<RefCell<bool>>,
@@ -70,7 +72,9 @@ impl SvaUI {
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
         if let Some(storage) = cc.storage {
-            return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
+            let mut sav_ui: SvaUI = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
+            sav_ui.connect_ports_on_open();
+            return sav_ui;
         }
         Default::default()
     }
@@ -98,12 +102,50 @@ impl SvaUI {
             self.current_port_connection_color_index = 0;
         }
     }
+    fn disconnect_ports(&mut self) {
+        for vm in self.vms.iter_mut() {
+            for i in 0..4 {
+                {
+                    vm.vm.lock().unwrap().disconnect(i);
+                }
+            }
+        }
+    }
+
+    
+
+    fn connect_ports_on_open(&mut self) {
+        let mut connections = self.connections.borrow_mut();
+        for conn in connections.iter_mut() {
+            let id_pairs = conn.get_connected_vms_and_ports('P');
+            for (vm_id, port_index) in id_pairs {
+                let x = self.vms.iter().find(|vm| vm.get_id() == vm_id);
+                if x.is_some() {
+                    {
+                        x.unwrap().vm.lock().unwrap().connect(port_index, conn);
+                    }
+                }
+                
+            }
+            for vm in self.vms.iter_mut() {}
+        }
+    }
 }
 
 impl eframe::App for SvaUI {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        self.disconnect_ports();
+        println!("Save");
         eframe::set_value(storage, eframe::APP_KEY, self);
+    }
+    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+
+        //println!("Ports disconnected");
+    }
+
+    fn auto_save_interval(&self) -> Duration {
+        Duration::MAX
     }
 
     /// Called each time the UI needs repainting, which may be many times per second.
@@ -127,9 +169,16 @@ impl eframe::App for SvaUI {
                                 let serialized_state = serde_json::to_string(&self);
 
                                 match serialized_state {
-                                    Ok(data) => ui.label(data),
+                                    Ok(data) => {
+                                        let file = File::create("STATE.json").unwrap();
+                                        let mut writer = BufWriter::new(file);
+                                        serde_json::to_writer(&mut writer, &data);
+                                        writer.flush();
+                                    }
 
-                                    Err(err) => ui.label(err.to_string()),
+                                    Err(err) => {
+                                        ui.label(err.to_string());
+                                    }
                                 };
                                 //let mut file = File::create("state.json").unwrap();
                             }
@@ -164,8 +213,13 @@ impl eframe::App for SvaUI {
                     ui.add(
                         egui::Slider::new(&mut self.ui_size, 0.75..=3.0)
                             .step_by(0.25)
-                            .text("delay"),
+                            .text("ui scale"),
                     );
+                    ui.separator();
+                    if ui.button("Clear").clicked() {
+                        self.vms.clear();
+                        self.connections = Rc::new(RefCell::new(Vec::new()));
+                    }
                     ui.separator();
 
                     ui.menu_button("Add", |ui| {
@@ -252,9 +306,15 @@ impl eframe::App for SvaUI {
             });
         });
 
+        // Central panel
+
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.label(self.language.to_string());
+
+            ui.collapsing("connections", |ui| {
+                let c = self.connections.clone();
+                ui.label(format!("{:?}", c));
+            });
             ui.separator();
 
             for index in 0..self.vms.len() {
@@ -271,8 +331,6 @@ impl eframe::App for SvaUI {
             });
         });
     }
-
-
 }
 
 fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
