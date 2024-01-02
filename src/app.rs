@@ -4,9 +4,10 @@ use std::rc::Rc;
 use std::time::Duration;
 use std::{fmt::Display, fs::File};
 
-use egui::{Button, Color32, Label, Stroke};
+use egui::{Button, Color32, Label, ScrollArea, Stroke};
 use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 
+use env_logger::Logger;
 use simple_virtual_assembler::assembler::parsing_err::ParsingError;
 use simple_virtual_assembler::components::connection;
 use simple_virtual_assembler::vm::instruction::Instruction;
@@ -17,6 +18,7 @@ use simple_virtual_assembler::{
 
 use simple_virtual_assembler::language::Language;
 
+use crate::custom_logger::CustomLogger;
 use crate::help_window::HelpWindow;
 use crate::sva_shell::SVAShell;
 
@@ -43,6 +45,11 @@ pub struct SvaUI {
     #[serde(skip)]
     port_connections_color_palle: [Color32; 7],
     current_port_connection_color_index: usize,
+    /// Custom logger
+    #[serde(skip)]
+    logger: CustomLogger,
+
+    debug_mode: bool,
 }
 
 impl Default for SvaUI {
@@ -59,6 +66,8 @@ impl Default for SvaUI {
             disconnect_mode: Rc::new(RefCell::new(false)),
             port_connections_color_palle: initialize_colors(),
             current_port_connection_color_index: 0,
+            logger: CustomLogger::new(),
+            debug_mode: false,
         }
     }
 }
@@ -74,15 +83,18 @@ impl SvaUI {
         if let Some(storage) = cc.storage {
             let mut sav_ui: SvaUI = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
             sav_ui.connect_ports_on_open();
+            sav_ui.logger = CustomLogger::new();
             return sav_ui;
         }
-        Default::default()
+        let mut sva_ui: SvaUI = Default::default();
+        sva_ui.logger = CustomLogger::new();
+        sva_ui
     }
 
     pub fn set_language(&mut self, language: Language) {
         //TODO:
         //self.vms.iter_mut().for_each(|vm| vm.set_language(language));
-
+        self.logger.log("Change language");
         match language {
             Language::Pl => self
                 .vms
@@ -112,8 +124,6 @@ impl SvaUI {
         }
     }
 
-    
-
     fn connect_ports_on_open(&mut self) {
         let mut connections = self.connections.borrow_mut();
         for conn in connections.iter_mut() {
@@ -125,7 +135,6 @@ impl SvaUI {
                         x.unwrap().vm.lock().unwrap().connect(port_index, conn);
                     }
                 }
-                
             }
             for vm in self.vms.iter_mut() {}
         }
@@ -137,6 +146,7 @@ impl eframe::App for SvaUI {
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         self.disconnect_ports();
         println!("Save");
+        self.logger.log("Save");
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
@@ -301,7 +311,23 @@ impl eframe::App for SvaUI {
                         self.help_widow.toggle_open_close();
                     }
 
+                    if ui.button("Debug").clicked() {
+                        self.debug_mode = !self.debug_mode;
+                    }
+
                     self.help_widow.show(ctx, ui);
+
+                    // debug window
+                    egui::Window::new("Debug")
+                        .open(&mut self.debug_mode)
+                        .show(ctx, |ui| {
+                            ScrollArea::vertical().max_height(600.0).show(ui, |ui| {
+                                for log in self.logger.get_logs().iter() {
+                                    ui.separator();
+                                    ui.label(log);
+                                }
+                            });
+                        });
                 });
             });
         });

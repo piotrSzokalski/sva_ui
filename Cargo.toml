@@ -31,6 +31,7 @@ egui_code_editor = "0.1.9"
 
 wasm-bindgen = "0.2"
 web-sys = "0.3"
+chrono = "0.4.31"
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
