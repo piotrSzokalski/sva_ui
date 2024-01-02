@@ -4,7 +4,8 @@ use std::rc::Rc;
 use std::time::Duration;
 use std::{fmt::Display, fs::File};
 
-use egui::{Button, Color32, Label, ScrollArea, Stroke};
+use egui::{containers::Window, Context};
+use egui::{Button, Color32, Label, ScrollArea, Stroke, Ui};
 use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 
 use env_logger::Logger;
@@ -38,7 +39,9 @@ pub struct SvaUI {
     //#[serde(skip)]
     vms: Vec<SVAShell>,
     connections: Rc<RefCell<Vec<Connection>>>,
+    #[serde(skip)]
     connection_started: Rc<RefCell<bool>>,
+    #[serde(skip)]
     disconnect_mode: Rc<RefCell<bool>>,
     ui_size: f32,
     help_widow: HelpWindow,
@@ -82,8 +85,9 @@ impl SvaUI {
         // Note that you must enable the `persistence` feature for this to work.
         if let Some(storage) = cc.storage {
             let mut sav_ui: SvaUI = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
-            sav_ui.connect_ports_on_open();
+            sav_ui.reconnect_ports();
             sav_ui.logger = CustomLogger::new();
+            sav_ui.resned_referees();
             return sav_ui;
         }
         let mut sva_ui: SvaUI = Default::default();
@@ -125,7 +129,7 @@ impl SvaUI {
         }
     }
 
-    fn connect_ports_on_open(&mut self) {
+    fn reconnect_ports(&mut self) {
         let mut connections = self.connections.borrow_mut();
         for conn in connections.iter_mut() {
             let id_pairs = conn.get_connected_vms_and_ports('P');
@@ -139,6 +143,34 @@ impl SvaUI {
             }
             for vm in self.vms.iter_mut() {}
         }
+    }
+    fn resned_referees(&mut self) {
+        for vm in self.vms.iter_mut() {
+            vm.set_refs(
+                self.connection_started.clone(),
+                self.connections.clone(),
+                self.disconnect_mode.clone(),
+            );
+        }
+    }
+
+    /// Shows debug window with logs and global variables
+    fn show_debug_window(&mut self, ctx: &Context, ui: &mut Ui) {
+        egui::Window::new("Debug")
+            .open(&mut self.debug_mode)
+            .show(ctx, |ui| {
+                ui.collapsing("variables", |ui| {});
+                ui.collapsing("logs", |ui| {
+                    ScrollArea::vertical().max_height(600.0).show(ui, |ui| {
+                        let logs = CustomLogger::get_logs_c();
+
+                        for log in logs.iter() {
+                            ui.separator();
+                            ui.label(log);
+                        }
+                    });
+                });
+            });
     }
 }
 
@@ -319,18 +351,7 @@ impl eframe::App for SvaUI {
                     self.help_widow.show(ctx, ui);
 
                     // debug window
-                    egui::Window::new("Debug")
-                        .open(&mut self.debug_mode)
-                        .show(ctx, |ui| {
-                            ScrollArea::vertical().max_height(600.0).show(ui, |ui| {
-                                let logs = CustomLogger::get_logs_c();
-
-                                for log in logs.iter() {
-                                    ui.separator();
-                                    ui.label(log);
-                                }
-                            });
-                        });
+                    self.show_debug_window(ctx, ui);
                 });
             });
         });

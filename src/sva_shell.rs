@@ -50,15 +50,21 @@ pub struct SVAShell {
     /// 'Start' or 'Stop' text for button
     control_button_text: String,
 
+    //  --------------------------------------RCs--------------------------------------
     /// Connecting in progress
+    #[serde(skip)]
     connection_started: Rc<RefCell<bool>>,
 
     /// Connections
+    #[serde(skip)]
     connections: Rc<RefCell<Vec<Connection>>>,
 
     /// Disconnect port on clikc
-    disconnect_mode: Rc<RefCell<bool>>,
 
+    //skiping to prevents cloing when serzliaing/desrizlaing
+    #[serde(skip)]
+    disconnect_mode: Rc<RefCell<bool>>,
+    //  -------------------------------------------------------------------------------
     ///Delay ms
     delay_ms: u64,
 
@@ -121,6 +127,18 @@ impl SVAShell {
         };
         s.vm.lock().unwrap().set_delay(1000);
         s
+    }
+
+    /// Sets filds that are Rc to new instances to presist state between seralzianon and deseralziaon
+    pub fn set_refs(
+        &mut self,
+        connection_started: Rc<RefCell<bool>>,
+        connections: Rc<RefCell<Vec<Connection>>>,
+        disconnect_mode: Rc<RefCell<bool>>,
+    ) {
+        self.connection_started = connection_started;
+        self.connections = connections;
+        self.disconnect_mode = disconnect_mode;
     }
 
     pub fn set_port_connection_color(&mut self, color: Color32) {
@@ -295,6 +313,11 @@ impl SVAShell {
                         ));
 
                         if ui.add_enabled(true, port_button).clicked() {
+                            CustomLogger::log(&format!(
+                                "PORT CLICKED: {}P{}",
+                                self.get_id(),
+                                index
+                            ));
                             let mut conn_started = self.connection_started.borrow_mut();
 
                             let connections = &mut self.connections.borrow_mut();
@@ -303,16 +326,24 @@ impl SVAShell {
 
                             if *conn_started {
                                 // connect port
+                                CustomLogger::log("Should connect");
                                 if let Some(mut conn) = connections.last_mut() {
                                     {
                                         let id = self.id.to_string() + "P" + &index.to_string();
-                                        
+
                                         let a = String::from("a");
                                         let b = String::from("b");
 
                                         let c = a + &b;
-                                        CustomLogger::log(&format!("Connecting port: {}P{}", self.get_id(), index));
-                                        self.vm.lock().unwrap().connect_with_id(index, &mut conn, id);
+                                        CustomLogger::log(&format!(
+                                            "Connecting port: {}P{}",
+                                            self.get_id(),
+                                            index
+                                        ));
+                                        self.vm
+                                            .lock()
+                                            .unwrap()
+                                            .connect_with_id(index, &mut conn, id);
                                     }
                                 }
                                 // change background color
@@ -320,8 +351,13 @@ impl SVAShell {
                             }
                             if *disconnect_mode {
                                 // disconnect
+                                CustomLogger::log("Should DISconnect");
                                 {
-                                    CustomLogger::log(&format!("DISCONNECTING port: {}P{}", self.get_id(), index));
+                                    CustomLogger::log(&format!(
+                                        "DISCONNECTING port: {}P{}",
+                                        self.get_id(),
+                                        index
+                                    ));
                                     self.vm.lock().unwrap().disconnect(index);
                                 }
                                 // change color to default
@@ -420,16 +456,6 @@ impl SVAShell {
             self.title = "ok".to_owned();
             self.run();
         }
-    }
-}
-
-impl Widget for SVAShell {
-    fn ui(self, ui: &mut Ui) -> egui::Response {
-        // Use Egui API to create your custom widget UI
-
-        let response = Label::new("ascx").ui(ui);
-        // Perform any additional actions or logic for your widget
-        response
     }
 }
 
