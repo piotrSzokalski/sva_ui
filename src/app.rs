@@ -94,7 +94,8 @@ impl SvaUI {
     pub fn set_language(&mut self, language: Language) {
         //TODO:
         //self.vms.iter_mut().for_each(|vm| vm.set_language(language));
-        self.logger.log("Change language");
+        //self.logger.log2("Change language");
+        CustomLogger::log("Changing language");
         match language {
             Language::Pl => self
                 .vms
@@ -146,7 +147,7 @@ impl eframe::App for SvaUI {
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         self.disconnect_ports();
         println!("Save");
-        self.logger.log("Save");
+        self.logger.log2("Save");
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
@@ -322,7 +323,9 @@ impl eframe::App for SvaUI {
                         .open(&mut self.debug_mode)
                         .show(ctx, |ui| {
                             ScrollArea::vertical().max_height(600.0).show(ui, |ui| {
-                                for log in self.logger.get_logs().iter() {
+                                let logs = CustomLogger::get_logs_c();
+
+                                for log in logs.iter() {
                                     ui.separator();
                                     ui.label(log);
                                 }

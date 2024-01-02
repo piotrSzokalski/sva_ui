@@ -24,6 +24,8 @@ use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 use simple_virtual_assembler::assembler::assembler::Assembler;
 
 use simple_virtual_assembler::language::Language;
+
+use crate::custom_logger::CustomLogger;
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct SVAShell {
     /// Id
@@ -309,7 +311,7 @@ impl SVAShell {
                                         let b = String::from("b");
 
                                         let c = a + &b;
-
+                                        CustomLogger::log(&format!("Connecting port: {}P{}", self.get_id(), index));
                                         self.vm.lock().unwrap().connect_with_id(index, &mut conn, id);
                                     }
                                 }
@@ -319,6 +321,7 @@ impl SVAShell {
                             if *disconnect_mode {
                                 // disconnect
                                 {
+                                    CustomLogger::log(&format!("DISCONNECTING port: {}P{}", self.get_id(), index));
                                     self.vm.lock().unwrap().disconnect(index);
                                 }
                                 // change color to default
