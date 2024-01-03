@@ -21,25 +21,32 @@ pub struct Indicator {
     data: i32,
     format: ValueFormat,
     text: String,
+    label: String,
 }
 
 impl Indicator {
-    pub fn new(data: i32) -> Self {
+    pub fn new(label: String) -> Self {
         Self {
-            data,
+            data: Default::default(),
             format: ValueFormat::Dec,
-            text: data.to_string(),
+            text: Default::default(),
+            label,
         }
     }
-    pub fn set_data(&mut self, data: i32) {
+    pub fn set(&mut self, data: i32, label: &str) -> &mut Indicator {
         self.data = data;
+        self.label= label.to_string();
+        self
+    }
+    pub fn set_data(&mut self, data: i32) -> &mut Indicator {
+        self.data = data;
+        self
     }
 
     pub fn show(&mut self, ctx: &Context, ui: &mut Ui) {
-        //CustomLogger::log(&!format!("showing INDICARO with {}", self.data));
         let formatted_value = self.write_in_format();
+        ui.label(&self.label);
         if ui.button(formatted_value).clicked() {
-            //CustomLogger::log(&format!("{:?}", self.format));
             self.switch_format();
         }
     }
@@ -47,8 +54,8 @@ impl Indicator {
     fn write_in_format(&mut self) -> String {
         match self.format {
             ValueFormat::Dec => format!("{}", self.data),
-            ValueFormat::Hex => format!("{:b}", self.data),
-            ValueFormat::Bin => format!("{:X}", self.data),
+            ValueFormat::Hex => format!("0b{:b}", self.data),
+            ValueFormat::Bin => format!("0X{:X}", self.data),
             ValueFormat::Unicode => {
                 if self.data < 0 {
                     return "Invalid Char".to_owned();
@@ -69,15 +76,5 @@ impl Indicator {
             ValueFormat::Hex => self.format = ValueFormat::Unicode,
             ValueFormat::Unicode => self.format = ValueFormat::Dec,
         }
-    }
-}
-
-impl Widget for Indicator {
-    fn ui(self, ui: &mut egui::Ui) -> egui::Response {
-        let x = ui.button(self.text);
-        if x.clicked() {
-            //self.change_format();
-        }
-        x
     }
 }

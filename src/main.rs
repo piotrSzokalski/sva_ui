@@ -1,6 +1,6 @@
 #![warn(clippy::all, rust_2018_idioms)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
-
+use backtrace::Backtrace;
 use std::fs::File;
 use std::io::{self, Write};
 
@@ -11,10 +11,11 @@ mod custom_logger;
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result<()> {
     use custom_logger::CustomLogger;
+    use env_logger::Logger;
 
     std::panic::set_hook(Box::new(|panic_info| {
         // This closure will be called on panic
-        let message = if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
+        let mut message = if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
             s.to_string()
         } else if let Some(s) = panic_info.payload().downcast_ref::<String>() {
             s.clone()
@@ -22,8 +23,21 @@ fn main() -> eframe::Result<()> {
             "Unknown panic".to_string()
         };
 
+        let backtrace = Backtrace::new();
+        let backtrace_str = format!("{:?}", backtrace);
+
+        message = message + "\n" + &backtrace_str;
         // Save the panic message to a file
-        save_panic_to_file(&message);
+
+        let current_datetime: DateTime<Utc> = Utc::now();
+        let formatted_datetime = current_datetime.format("%Y-%m-%d %H:%M:%S").to_string();
+        let painc_path = format!("SVA_panic_log{}.txt", formatted_datetime);
+        save_to_file(painc_path, &message);
+
+        // Save logs to file
+        //let logs_path = format!("SVA_logs{}.txt", formatted_datetime);
+        
+       // save_to_file(logs_path, &CustomLogger::get_logs_c().join("\n"));
 
         // You can customize this to save the error message to a different file or perform any other action
     }));
@@ -64,10 +78,9 @@ fn main() {
     });
 }
 
-fn save_panic_to_file(message: &str) {
-    let current_datetime: DateTime<Utc> = Utc::now();
-    let formatted_datetime = current_datetime.format("%Y-%m-%d %H:%M:%S").to_string();
-    if let Ok(mut file) = File::create(format!("SVA_panic_log{}.txt", formatted_datetime)) {
+fn save_to_file(path: String, message: &str) {
+   
+    if let Ok(mut file) = File::create(path) {
         if let Err(err) = writeln!(file, "{}", message) {
             eprintln!("Failed to write panic log to file: {}", err);
         }

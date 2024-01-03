@@ -79,7 +79,7 @@ pub struct SVAShell {
 
     vm_state_previous: (i32, usize, Flag, [i32; 4], [i32; 4], VmStatus, u32),
     #[serde(skip)]
-    indicators: [Indicator; 1],
+    indicators: [Indicator; 13],
 }
 
 impl Default for SVAShell {
@@ -104,7 +104,21 @@ impl Default for SVAShell {
             port_colors: [Color32::GRAY, Color32::GRAY, Color32::GRAY, Color32::GRAY],
             vm_state: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
             vm_state_previous: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
-            indicators: Default::default(),
+            indicators: [
+                Indicator::new("acc".to_owned()),
+                Indicator::new("pc".to_owned()),
+                Indicator::new("flag".to_owned()),
+                Indicator::new("r0".to_owned()),
+                Indicator::new("r1".to_owned()),
+                Indicator::new("r2".to_owned()),
+                Indicator::new("r3".to_owned()),
+                Indicator::new("p0".to_owned()),
+                Indicator::new("p1".to_owned()),
+                Indicator::new("p2".to_owned()),
+                Indicator::new("p3".to_owned()),
+                Indicator::new("status".to_owned()),
+                Indicator::new("delay".to_owned()),
+            ],
         }
     }
 }
@@ -173,9 +187,15 @@ impl SVAShell {
     pub fn show(&mut self, ctx: &Context, ui: &mut Ui) {
         {
             self.vm_state_previous = self.vm_state;
+         
 
-            self.vm_state = self.vm.lock().unwrap().get_state_for_display();
+            match self.vm.lock() {
+                Ok(vm) => self.vm_state = vm.get_state_for_display(),
+                Err(err) => CustomLogger::log(&format!("{:?}", err)),
+            }
+            
         }
+        let (acc, pc, flag, r, p, vm_status, delay) = self.vm_state;
 
         egui::Window::new(&self.id.to_string())
             .open(&mut true)
@@ -202,12 +222,6 @@ impl SVAShell {
                         // if ui.button("run").clicked() {
                         //     self.assemble_and_run();
                         // }
-
-                        let vm_status;
-
-                        {
-                            vm_status = self.vm.lock().unwrap().get_status();
-                        }
 
                         if vm_status == VmStatus::Running {
                             self.control_button_text = "Stop".to_owned();
@@ -248,8 +262,6 @@ impl SVAShell {
                                 }
                             }
                         }
-
-                        //assemble_and_run(&mut self.vm, &self.code, &mut self.tex_t);
 
                         if ui.button("step").clicked() {
                             self.step();
@@ -302,30 +314,22 @@ impl SVAShell {
                 //         });
                 // });
 
-                ui.horizontal(|ui| {
-                    for indicator in &mut self.indicators {
-                        indicator.set_data(self.vm_state.0);
-                        indicator.show(ctx, ui);
-                    }
-                });
+                let labels = ["acc", "pc", "flag", "r:0-3", "p:0-3", "status", "delay"];
 
                 ui.horizontal(|ui| {
-                    ui.label("acc");
+                    self.indicators[0].set(acc, "acc").show(ctx, ui);
+                    self.indicators[1]
+                        .set(pc.try_into().unwrap_or(0), "pc")
+                        .show(ctx, ui);
 
-                    {
-                        ui.button(self.vm.lock().unwrap().get_acc().to_string());
-                    }
-                    ui.label("pc");
-                    ui.button(self.vm.lock().unwrap().get_pc().to_string());
+                    // flag
                     ui.label("flag");
-                    ui.button(self.vm.lock().unwrap().get_flag().to_string());
-                });
+                    ui.button(flag.to_string());
 
-                ui.horizontal(|ui| {
-                    ui.label("r 0-3");
-                    {
-                        ui.button(format!("{:?}", self.vm.lock().unwrap().get_registers()));
-                    }
+                    self.indicators[2].set(r[0], "r0").show(ctx, ui);
+                    self.indicators[2].set(r[1], "r1").show(ctx, ui);
+                    self.indicators[2].set(r[2], "r2").show(ctx, ui);
+                    self.indicators[2].set(r[3], "r3").show(ctx, ui);
                 });
 
                 ui.vertical(|ui| {
@@ -421,7 +425,10 @@ impl SVAShell {
                 //temp
                 //self.vm = Arc::new(Mutex::new(VirtualMachine::new_with_program(program)));
                 {
-                    self.vm.lock().unwrap().load_program(program);
+                   match self.vm.lock() {
+                    Ok(mut vm) => vm.load_program(program),
+                    Err(err) => CustomLogger::log(&format!("{:?}", err)),
+                }
                 }
                 //self.vm.load_program(program);
                 self.parsing_error = None
