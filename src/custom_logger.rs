@@ -35,4 +35,8 @@ impl CustomLogger {
         LOGGS.lock().unwrap().clone()
     }
 
+    pub fn clear_logs() {
+        LOGGS.lock().unwrap().clear();
+    }
+
 }

@@ -9,7 +9,7 @@ rust-version = "1.72"
 
 # Virtual machine
 
-simple_virtual_assembler = {git = "https://github.com/piotrSzokalski/simple_virtual_assembler.git", branch = "connection_rework_3"} 
+simple_virtual_assembler = {git = "https://github.com/piotrSzokalski/simple_virtual_assembler.git", branch = "master"} 
 
 # UI liblary
 

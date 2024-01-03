@@ -4,6 +4,7 @@ mod app;
 mod sva_shell;
 mod help_window;
 mod custom_logger;
+mod indicator;
 
 pub use app::SvaUI;
 

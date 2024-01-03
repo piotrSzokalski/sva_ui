@@ -2,6 +2,7 @@ use eframe::glow::NONE;
 use egui::Button;
 use egui::Color32;
 use egui::Stroke;
+use simple_virtual_assembler::vm::flag::Flag;
 use std::cell::Ref;
 use std::cell::RefCell;
 use std::default;
@@ -26,6 +27,8 @@ use simple_virtual_assembler::assembler::assembler::Assembler;
 use simple_virtual_assembler::language::Language;
 
 use crate::custom_logger::CustomLogger;
+use crate::indicator;
+use crate::indicator::Indicator;
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct SVAShell {
     /// Id
@@ -71,6 +74,12 @@ pub struct SVAShell {
     current_color_for_connection: Color32,
 
     port_colors: [Color32; 4],
+
+    vm_state: (i32, usize, Flag, [i32; 4], [i32; 4], VmStatus, u32),
+
+    vm_state_previous: (i32, usize, Flag, [i32; 4], [i32; 4], VmStatus, u32),
+    #[serde(skip)]
+    indicators: [Indicator; 1],
 }
 
 impl Default for SVAShell {
@@ -93,6 +102,9 @@ impl Default for SVAShell {
             disconnect_mode: Rc::new(RefCell::new(false)),
             current_color_for_connection: Color32::GOLD,
             port_colors: [Color32::GRAY, Color32::GRAY, Color32::GRAY, Color32::GRAY],
+            vm_state: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
+            vm_state_previous: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
+            indicators: Default::default(),
         }
     }
 }
@@ -124,6 +136,9 @@ impl SVAShell {
             disconnect_mode,
             current_color_for_connection,
             port_colors: [Color32::GRAY, Color32::GRAY, Color32::GRAY, Color32::GRAY],
+            vm_state: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
+            vm_state_previous: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
+            indicators: Default::default(),
         };
         s.vm.lock().unwrap().set_delay(1000);
         s
@@ -154,7 +169,14 @@ impl SVAShell {
         self.assembler.set_language(language);
     }
 
+    // runs each frame
     pub fn show(&mut self, ctx: &Context, ui: &mut Ui) {
+        {
+            self.vm_state_previous = self.vm_state;
+
+            self.vm_state = self.vm.lock().unwrap().get_state_for_display();
+        }
+
         egui::Window::new(&self.id.to_string())
             .open(&mut true)
             .show(ctx, |ui| {
@@ -281,7 +303,15 @@ impl SVAShell {
                 // });
 
                 ui.horizontal(|ui| {
+                    for indicator in &mut self.indicators {
+                        indicator.set_data(self.vm_state.0);
+                        indicator.show(ctx, ui);
+                    }
+                });
+
+                ui.horizontal(|ui| {
                     ui.label("acc");
+
                     {
                         ui.button(self.vm.lock().unwrap().get_acc().to_string());
                     }
@@ -380,18 +410,6 @@ impl SVAShell {
             ctx.request_repaint_after(Duration::from_millis(10));
         }
     }
-
-    /// Draws connection to mouse
-    fn draw_connection_to_mouse(&mut self) {}
-    /// Handles connecting ports, draws connection
-    fn connect_port(&mut self, port: Port) {
-        self.draw_connection_to_mouse();
-    }
-    /// Handles disconnecting ports
-    fn disconnect_port(&mut self, port: Port) {}
-
-    /// Assembles code supposed to be used in parent 'screen'
-    pub fn assemble(&mut self) {}
 
     /// Tries Assembles code to instructions and loads them to vm
     pub fn try_assemble_and_load(&mut self) {

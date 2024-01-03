@@ -163,7 +163,9 @@ impl SvaUI {
                 ui.collapsing("logs", |ui| {
                     ScrollArea::vertical().max_height(600.0).show(ui, |ui| {
                         let logs = CustomLogger::get_logs_c();
-
+                        if ui.button("Clear").clicked() {
+                            CustomLogger::clear_logs();
+                        }
                         for log in logs.iter() {
                             ui.separator();
                             ui.label(log);
