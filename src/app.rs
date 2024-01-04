@@ -1,4 +1,5 @@
 use std::cell::{Ref, RefCell};
+use std::fs;
 use std::io::{BufWriter, Write};
 use std::rc::Rc;
 use std::time::Duration;
@@ -207,25 +208,44 @@ impl eframe::App for SvaUI {
                     #[cfg(not(target_arch = "wasm32"))] // no File->Quit on web pages!
                     {
                         ui.menu_button("File", |ui| {
-                            if ui.button("import").clicked() {}
+                            if ui.button("import2").clicked() {
+                                let data = fs::read_to_string("STATE.json");
+                                match data {
+                                    Ok(data) => {
+                                        let json: Result<SvaUI, serde_json::Error> =
+                                            serde_json::from_str(&data);
+                                        match json {
+                                            Ok(sva_ui) => {
+                                                *self = sva_ui;
+                                            }
+                                            Err(err) => CustomLogger::log(&format!(
+                                                "Could not parse to json \n {}",
+                                                err
+                                            )),
+                                        }
+                                    }
+                                    Err(err) => CustomLogger::log(&format!(
+                                        "Could not open file \n {}",
+                                        err
+                                    )),
+                                }
+                            }
 
-                            if ui.button("export").clicked() {
-                                ui.label("pressed");
+                            if ui.button("export2").clicked() {
                                 let serialized_state = serde_json::to_string(&self);
 
                                 match serialized_state {
                                     Ok(data) => {
                                         let file = File::create("STATE.json").unwrap();
                                         let mut writer = BufWriter::new(file);
-                                        serde_json::to_writer(&mut writer, &data);
-                                        writer.flush();
+                                        // Write the data directly, without using serde_json::to_writer
+                                        writer.write_all(data.as_bytes()).unwrap();
+                                        writer.flush().unwrap();
                                     }
-
                                     Err(err) => {
                                         ui.label(err.to_string());
                                     }
                                 };
-                                //let mut file = File::create("state.json").unwrap();
                             }
 
                             // if ui.button("Quit").clicked() {
