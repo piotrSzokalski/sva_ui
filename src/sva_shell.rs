@@ -224,18 +224,18 @@ impl SVAShell {
                         // }
 
                         if vm_status == VmStatus::Running {
-                            self.control_button_text = "Stop".to_owned();
+                            self.control_button_text = t!("sva_shell.button.stop").to_owned();
                         }
 
                         match vm_status {
-                            VmStatus::Initial => self.control_button_text = "Start".to_owned(),
-                            VmStatus::Running => self.control_button_text = "Stop".to_owned(),
-                            VmStatus::Stopped => self.control_button_text = "Resume".to_owned(),
-                            VmStatus::Finished => self.control_button_text = "Start".to_owned(),
+                            VmStatus::Initial => self.control_button_text = t!("sva_shell.button.start").to_owned(),
+                            VmStatus::Running => self.control_button_text = t!("sva_shell.button.stop").to_owned(),
+                            VmStatus::Stopped => self.control_button_text = t!("sva_shell.button.resume").to_owned(),
+                            VmStatus::Finished => self.control_button_text = t!("sva_shell.button.start").to_owned(),
                         }
 
                         if vm_status == VmStatus::Running || vm_status == VmStatus::Stopped {
-                            if ui.button("Halt").clicked() {
+                            if ui.button(t!("sva_shell.button.halt")).clicked() {
                                 VirtualMachine::halt(self.vm.clone());
                             }
                         }
@@ -263,10 +263,10 @@ impl SVAShell {
                             }
                         }
 
-                        if ui.button("step").clicked() {
+                        if ui.button(t!("sva_shell.button.step")).clicked() {
                             self.step();
                         }
-                        if ui.button("reset").clicked() {
+                        if ui.button(t!("sva_shell.button.reset")).clicked() {
                             self.vm.lock().unwrap().clear_registers();
                         }
                     });
@@ -280,7 +280,7 @@ impl SVAShell {
                     false,
                 )
                 .show_header(ui, |ui| {
-                    ui.heading("Code");
+                    ui.heading(t!("sva_shell.code_block"));
                 })
                 .body(|ui| {
                     egui::ScrollArea::vertical()

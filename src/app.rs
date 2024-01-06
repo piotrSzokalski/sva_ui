@@ -74,6 +74,7 @@ pub struct SvaUI {
 
 impl Default for SvaUI {
     fn default() -> Self {
+        rust_i18n::set_locale("en");
         Self {
             // Example stuff:
             // vm_shell: SVAShell::new(0, "First VM window".to_string()),
@@ -104,6 +105,7 @@ impl SvaUI {
 
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
+        rust_i18n::set_locale("en");
         if let Some(storage) = cc.storage {
             let mut sav_ui: SvaUI = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
             sav_ui.reconnect_ports();
@@ -120,6 +122,8 @@ impl SvaUI {
         //TODO:
         //self.vms.iter_mut().for_each(|vm| vm.set_language(language));
         //self.logger.log2("Change language");
+
+        rust_i18n::set_locale(language.string_code());
         CustomLogger::log("Changing language");
         match language {
             Language::Pl => self
@@ -192,7 +196,9 @@ impl SvaUI {
                 writer.flush().unwrap();
             }
             Err(err) => {
-                //ui.label(err.to_string());
+                self.toasts
+                .info(t!("error.export.cant_serialize"))
+                .set_duration(Some(Duration::from_secs(10)));
             }
         };
     }
@@ -209,27 +215,32 @@ impl SvaUI {
                         self.resned_refrences();
                     }
                     Err(err) => {
-                        CustomLogger::log(&format!("Could not parse to json \n {}", err));
+                        CustomLogger::log(&format!("{} \n {}", t!("error.import.bad_json"), err));
                         self.toasts
-                            .info("Could not parse to json")
+                            .info(t!("error.import.bad_json"))
                             .set_duration(Some(Duration::from_secs(10)));
                     }
                 }
             }
-            Err(err) => CustomLogger::log(&format!("Could not open file \n {}", err)),
+            Err(err) => {
+                CustomLogger::log(&format!("Could not open file \n {}", err));
+                self.toasts
+                            .info(t!("error.file.cant_open"))
+                            .set_duration(Some(Duration::from_secs(10)));
+            }
         }
     }
 
     /// Shows debug window with logs and global variables
     fn show_debug_window(&mut self, ctx: &Context, ui: &mut Ui) {
-        egui::Window::new("Debug")
+        egui::Window::new(t!("window.debug"))
             .open(&mut self.debug_mode)
             .show(ctx, |ui| {
                 ui.collapsing("variables", |ui| {});
                 ui.collapsing("logs", |ui| {
                     ScrollArea::vertical().max_height(600.0).show(ui, |ui| {
                         let logs = CustomLogger::get_logs_c();
-                        if ui.button("Clear").clicked() {
+                        if ui.button(t!("button.clear")).clicked() {
                             CustomLogger::clear_logs();
                         }
                         for log in logs.iter() {
@@ -246,8 +257,6 @@ impl eframe::App for SvaUI {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         self.disconnect_ports();
-        println!("Save");
-        self.logger.log2("Save");
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
@@ -272,13 +281,13 @@ impl eframe::App for SvaUI {
                 egui::menu::bar(ui, |ui| {
                     #[cfg(not(target_arch = "wasm32"))] // no File->Quit on web pages!
                     {
-                        ui.menu_button("File", |ui| {
-                            if ui.button("import").clicked() {
+                        ui.menu_button(t!("menu.file"), |ui| {
+                            if ui.button(t!("menu.file.import")).clicked() {
                                 let mut dialog = FileDialog::open_file(self.opened_file.clone());
                                 dialog.open();
                                 self.open_file_dialog = Some(dialog);
                             }
-                            if ui.button("export").clicked() {
+                            if ui.button(t!("menu.file.export")).clicked() {
                                 let mut dialog = FileDialog::save_file(self.opened_file.clone());
                                 dialog.open();
                                 self.save_file_dialog = Some(dialog);
@@ -313,13 +322,13 @@ impl eframe::App for SvaUI {
                             .text("ui scale"),
                     );
                     ui.separator();
-                    if ui.button("Clear").clicked() {
+                    if ui.button(t!("button.clear")).clicked() {
                         self.vms.clear();
                         self.connections = Rc::new(RefCell::new(Vec::new()));
                     }
                     ui.separator();
 
-                    ui.menu_button("Add", |ui| {
+                    ui.menu_button(t!("button.add"), |ui| {
                         if ui.button("vm").clicked() {
                             let id = self.vms.last().map_or(0, |last| last.get_id() + 1);
                             let mut x = SVAShell::new(
@@ -394,7 +403,7 @@ impl eframe::App for SvaUI {
                         }
                     }
 
-                    if ui.button("Help").clicked() {
+                    if ui.button(t!("label.help")).clicked() {
                         self.help_widow.toggle_open_close();
                     }
 

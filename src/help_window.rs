@@ -63,7 +63,7 @@ impl HelpWindow {
 
         "#;
 
-        egui::Window::new("Help")
+        egui::Window::new(t!("widow.help"))
         .open(&mut self.is_open)
         .show(ctx, |ui| {
             ui.collapsing("Rejestry", |ui| {

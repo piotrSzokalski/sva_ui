@@ -1,0 +1,56 @@
+_version: 2
+widow.help:
+  en: Help
+  pl: Pomoc
+window.debug:
+  en: Debug
+  pl: Debug
+menu.file:
+  en: file
+  pl: plik
+menu.file.export:
+  en: export
+  pl: eksportuj
+menu.file.import:
+  en: import
+  pl: importuj
+slider.ui.scale:
+  en: ui scale
+  pl: rozmiar ui
+button.clear:
+  en: clear
+  pl: wyczyść
+button.add:
+  en: Add
+  pl: Dodaj
+error.file.cant_open:
+  en: Could not open file
+  pl: Nie można odtworzyć pliku
+error.import.bad_json:
+  en: Invalid json
+  pl: Nie poprawy json
+error.export.cant_serialize:
+  en: Can't save app state
+  pl: Nie można zapisać stanu aplikacji
+sva_shell.button.start:
+  en: Start
+  pl: Uruchom
+sva_shell.button.stop:
+  en: Stop
+  pl: Zatrzymaj
+sva_shell.button.resume:
+  en: Resume
+  pl: Wzów
+sva_shell.button.halt:
+  en: Halt
+  pl: Zakończ
+sva_shell.button.reset:
+  en: Reset
+  pl: Zresetuj
+sva_shell.button.step:
+  en: Step
+  pl: Wykonaj 1 instrukcje
+sva_shell.code_block:
+  en: Code
+  pl: Kod
+
