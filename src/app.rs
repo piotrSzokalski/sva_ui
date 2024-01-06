@@ -1,14 +1,18 @@
 use std::cell::{Ref, RefCell};
 use std::fs;
 use std::io::{BufWriter, Write};
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::Duration;
 use std::{fmt::Display, fs::File};
 
+use eframe::glow::NONE;
+use egui::epaint::tessellator::path;
 use egui::{containers::Window, Context};
 use egui::{Button, Color32, Label, ScrollArea, Stroke, Ui};
 use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 
+use egui_file::FileDialog;
 use env_logger::Logger;
 use simple_virtual_assembler::assembler::parsing_err::ParsingError;
 use simple_virtual_assembler::components::connection;
@@ -17,6 +21,8 @@ use simple_virtual_assembler::vm::virtual_machine::VirtualMachine;
 use simple_virtual_assembler::{
     assembler::assembler::Assembler, components::connection::Connection,
 };
+
+use egui_notify::{Toast, Toasts};
 
 use simple_virtual_assembler::language::Language;
 
@@ -54,6 +60,13 @@ pub struct SvaUI {
     logger: CustomLogger,
 
     debug_mode: bool,
+
+    #[serde(skip)]
+    opened_file: Option<PathBuf>,
+    #[serde(skip)]
+    open_file_dialog: Option<FileDialog>,
+    #[serde(skip)]
+    toasts: Toasts,
 }
 
 impl Default for SvaUI {
@@ -72,6 +85,9 @@ impl Default for SvaUI {
             current_port_connection_color_index: 0,
             logger: CustomLogger::new(),
             debug_mode: false,
+            opened_file: None,
+            open_file_dialog: None,
+            toasts: Toasts::default(),
         }
     }
 }
@@ -88,7 +104,7 @@ impl SvaUI {
             let mut sav_ui: SvaUI = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
             sav_ui.reconnect_ports();
             sav_ui.logger = CustomLogger::new();
-            sav_ui.resned_referees();
+            sav_ui.resned_refrences();
             return sav_ui;
         }
         let mut sva_ui: SvaUI = Default::default();
@@ -145,13 +161,36 @@ impl SvaUI {
             for vm in self.vms.iter_mut() {}
         }
     }
-    fn resned_referees(&mut self) {
+    fn resned_refrences(&mut self) {
         for vm in self.vms.iter_mut() {
             vm.set_refs(
                 self.connection_started.clone(),
                 self.connections.clone(),
                 self.disconnect_mode.clone(),
             );
+        }
+    }
+
+    fn export_to_file(&mut self) {}
+
+    fn import_file(&mut self, path: String) {
+        let data = fs::read_to_string(path);
+        match data {
+            Ok(data) => {
+                let json: Result<SvaUI, serde_json::Error> = serde_json::from_str(&data);
+                match json {
+                    Ok(sva_ui) => {
+                        *self = sva_ui;
+                    }
+                    Err(err) => {
+                        CustomLogger::log(&format!("Could not parse to json \n {}", err));
+                        self.toasts
+                            .info("Could not parse to json")
+                            .set_duration(Some(Duration::from_secs(10)));
+                    }
+                }
+            }
+            Err(err) => {CustomLogger::log(&format!("Could not open file \n {}", err))},
         }
     }
 
@@ -246,6 +285,16 @@ impl eframe::App for SvaUI {
                                         ui.label(err.to_string());
                                     }
                                 };
+                            }
+
+                            if ui.button("TEST").clicked() {
+                                self.toasts.info("Hello world!").set_duration(Some(Duration::from_secs(5)));
+                            }
+
+                            if ui.button("im").clicked() {
+                                let mut dialog = FileDialog::open_file(self.opened_file.clone());
+                                dialog.open();
+                                self.open_file_dialog = Some(dialog);
                             }
 
                             // if ui.button("Quit").clicked() {
@@ -374,6 +423,9 @@ impl eframe::App for SvaUI {
 
                     // debug window
                     self.show_debug_window(ctx, ui);
+
+                    // notifications
+                    self.toasts.show(ctx);
                 });
             });
         });
@@ -401,7 +453,25 @@ impl eframe::App for SvaUI {
                 powered_by_egui_and_eframe(ui);
                 egui::warn_if_debug_build(ui);
             });
-        });
+            // _____________________________________________
+
+            if let Some(dialog) = &mut self.open_file_dialog {
+                if dialog.show(ctx).selected() {
+                    if let Some(file) = dialog.path() {
+                        self.opened_file = Some(PathBuf::from(file));
+                        CustomLogger::log(&format!("{:?}", self.opened_file));
+                        self.import_file(
+                            self.opened_file
+                                .clone()
+                                .unwrap()
+                                .to_str()
+                                .unwrap()
+                                .to_owned(),
+                        );
+                    }
+                }
+            }
+        }); // Central panel
     }
 }
 

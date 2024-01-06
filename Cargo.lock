@@ -909,6 +909,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "egui-notify"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bedb26510c661d5d69958aae802d768aa1c344673e9029a20b356fa7f8a4a8e1"
+dependencies = [
+ "egui",
+]
+
+[[package]]
 name = "egui-winit"
 version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -931,6 +940,15 @@ name = "egui_code_editor"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "63490ee65e16e072fa62a29db3a3c3057cbfce1fcf9c5909f1af8a6f9d642b28"
+dependencies = [
+ "egui",
+]
+
+[[package]]
+name = "egui_file"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04989cc1638c8c1c9e7347180a90bc58a5ae9c2236668a6bd927df0e185ff47b"
 dependencies = [
  "egui",
 ]
@@ -2528,7 +2546,9 @@ dependencies = [
  "chrono",
  "eframe",
  "egui",
+ "egui-notify",
  "egui_code_editor",
+ "egui_file",
  "env_logger",
  "log",
  "serde",
