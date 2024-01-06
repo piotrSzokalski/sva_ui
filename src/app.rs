@@ -65,6 +65,9 @@ pub struct SvaUI {
     opened_file: Option<PathBuf>,
     #[serde(skip)]
     open_file_dialog: Option<FileDialog>,
+
+    #[serde(skip)]
+    save_file_dialog: Option<FileDialog>,
     #[serde(skip)]
     toasts: Toasts,
 }
@@ -87,6 +90,7 @@ impl Default for SvaUI {
             debug_mode: false,
             opened_file: None,
             open_file_dialog: None,
+            save_file_dialog: None,
             toasts: Toasts::default(),
         }
     }
@@ -170,8 +174,23 @@ impl SvaUI {
             );
         }
     }
+    // RENDMEVER TO DIS CONNECT and RECONTECT
+    fn export_to_file(&mut self, path: String) {
+        let serialized_state = serde_json::to_string(&self);
 
-    fn export_to_file(&mut self) {}
+        match serialized_state {
+            Ok(data) => {
+                let file = File::create(path).unwrap();
+                let mut writer = BufWriter::new(file);
+                // Write the data directly, without using serde_json::to_writer
+                writer.write_all(data.as_bytes()).unwrap();
+                writer.flush().unwrap();
+            }
+            Err(err) => {
+                //ui.label(err.to_string());
+            }
+        };
+    }
 
     fn import_file(&mut self, path: String) {
         let data = fs::read_to_string(path);
@@ -190,7 +209,7 @@ impl SvaUI {
                     }
                 }
             }
-            Err(err) => {CustomLogger::log(&format!("Could not open file \n {}", err))},
+            Err(err) => CustomLogger::log(&format!("Could not open file \n {}", err)),
         }
     }
 
@@ -247,29 +266,6 @@ impl eframe::App for SvaUI {
                     #[cfg(not(target_arch = "wasm32"))] // no File->Quit on web pages!
                     {
                         ui.menu_button("File", |ui| {
-                            if ui.button("import2").clicked() {
-                                let data = fs::read_to_string("STATE.json");
-                                match data {
-                                    Ok(data) => {
-                                        let json: Result<SvaUI, serde_json::Error> =
-                                            serde_json::from_str(&data);
-                                        match json {
-                                            Ok(sva_ui) => {
-                                                *self = sva_ui;
-                                            }
-                                            Err(err) => CustomLogger::log(&format!(
-                                                "Could not parse to json \n {}",
-                                                err
-                                            )),
-                                        }
-                                    }
-                                    Err(err) => CustomLogger::log(&format!(
-                                        "Could not open file \n {}",
-                                        err
-                                    )),
-                                }
-                            }
-
                             if ui.button("export2").clicked() {
                                 let serialized_state = serde_json::to_string(&self);
 
@@ -288,7 +284,9 @@ impl eframe::App for SvaUI {
                             }
 
                             if ui.button("TEST").clicked() {
-                                self.toasts.info("Hello world!").set_duration(Some(Duration::from_secs(5)));
+                                self.toasts
+                                    .info("Hello world!")
+                                    .set_duration(Some(Duration::from_secs(5)));
                             }
 
                             if ui.button("im").clicked() {
@@ -296,10 +294,11 @@ impl eframe::App for SvaUI {
                                 dialog.open();
                                 self.open_file_dialog = Some(dialog);
                             }
-
-                            // if ui.button("Quit").clicked() {
-                            //     _frame.close();
-                            // }
+                            if ui.button("ep").clicked() {
+                                let mut dialog = FileDialog::save_file(self.opened_file.clone());
+                                dialog.open();
+                                self.save_file_dialog = Some(dialog);
+                            }
                         });
                         ui.add_space(16.0);
                     }
@@ -455,6 +454,7 @@ impl eframe::App for SvaUI {
             });
             // _____________________________________________
 
+            // open file dialog
             if let Some(dialog) = &mut self.open_file_dialog {
                 if dialog.show(ctx).selected() {
                     if let Some(file) = dialog.path() {
@@ -468,6 +468,17 @@ impl eframe::App for SvaUI {
                                 .unwrap()
                                 .to_owned(),
                         );
+                    }
+                }
+            }
+
+            // save to file dialog
+            if let Some(dialog) = &mut self.save_file_dialog {
+                if dialog.show(ctx).selected() {
+                    if let Some(file) = dialog.path() {
+                        self.opened_file = Some(PathBuf::from(file));
+                        CustomLogger::log(&format!("{:?}", self.opened_file));
+                        self.export_to_file(self.opened_file.clone().unwrap().to_str().unwrap().to_owned());
                     }
                 }
             }
