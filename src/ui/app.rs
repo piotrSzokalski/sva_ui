@@ -35,7 +35,7 @@ use serde_json;
 use wasm_bindgen::prelude::*;
 use web_sys::{js_sys::Array, *};
 
-use crate::storage::connections::{ConnectionManager, CONNECTING_STATE};
+use crate::storage::connections::{ConnectionManager, CONNECTING_STATE, self};
 use crate::storage::custom_logger::CustomLogger;
 
 use super::help_window::HelpWindow;
@@ -74,6 +74,8 @@ pub struct SvaUI {
     save_file_dialog: Option<FileDialog>,
     #[serde(skip)]
     toasts: Toasts,
+
+    connections_copy: Vec<Connection>
 }
 
 impl Default for SvaUI {
@@ -97,6 +99,7 @@ impl Default for SvaUI {
             open_file_dialog: None,
             save_file_dialog: None,
             toasts: Toasts::default(),
+            connections_copy: Default::default(),
         }
     }
 }
@@ -112,6 +115,7 @@ impl SvaUI {
         rust_i18n::set_locale("en");
         if let Some(storage) = cc.storage {
             let mut sav_ui: SvaUI = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
+            sav_ui.set_connections();
             sav_ui.reconnect_ports();
             sav_ui.logger = CustomLogger::new();
             sav_ui.resned_refrences();
@@ -158,8 +162,22 @@ impl SvaUI {
         }
     }
 
+    fn copy_connections(&mut self) {
+        self.connections_copy = ConnectionManager::get_connections().lock().unwrap().clone();
+        CustomLogger::log("Copying connections");
+        CustomLogger::log(&format!("{:?}", self.connections_copy));
+        CustomLogger::log("________________________________________");
+    }
+
+    fn set_connections(&mut self) {
+        ConnectionManager::set_connection(self.connections_copy.clone());
+        self.connections_copy.clear();
+    }
+
     fn reconnect_ports(&mut self) {
-        let mut connections = self.connections.borrow_mut();
+        //let mut connections = self.connections.borrow_mut();
+        let binding = ConnectionManager::get_connections();
+        let mut connections = binding.lock().unwrap();
         for conn in connections.iter_mut() {
             let id_pairs = conn.get_connected_vms_and_ports('P');
             for (vm_id, port_index) in id_pairs {
@@ -184,10 +202,11 @@ impl SvaUI {
     }
     // RENDMEVER TO DIS CONNECT and RECONTECT
     fn export_to_file(&mut self, path: String) {
+        self.copy_connections();
         self.disconnect_ports();
 
         let serialized_state = serde_json::to_string(&self);
-
+        self.set_connections();
         self.reconnect_ports();
         self.resned_refrences();
 
@@ -215,6 +234,7 @@ impl SvaUI {
                 match json {
                     Ok(sva_ui) => {
                         *self = sva_ui;
+                        self.set_connections();
                         self.reconnect_ports();
                         self.resned_refrences();
                     }
@@ -263,6 +283,7 @@ impl SvaUI {
 impl eframe::App for SvaUI {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        self.copy_connections();
         self.disconnect_ports();
         eframe::set_value(storage, eframe::APP_KEY, self);
     }

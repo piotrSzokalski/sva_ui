@@ -17,6 +17,7 @@ pub enum ConnectingState {
     Disconnecting,
 }
 
+
 pub static CONNECTING_STATE: Mutex<ConnectingState> = Mutex::new(ConnectingState::NONE);
 
 static NEXT_CONN_ID: Mutex<usize> = Mutex::new(0);
@@ -39,6 +40,12 @@ impl ConnectionManager {
 
     pub fn get_connections() -> Arc<Mutex<Vec<Connection>>> {
         CONNECTIONS.clone()
+    }
+
+    pub fn set_connection(state: Vec<Connection>) {
+        CustomLogger::log(&format!("Setting connectinos \n to {:?}", state));
+        *CONNECTIONS.lock().unwrap() = state;
+        
     }
 
     pub fn clear_connections() {
