@@ -52,9 +52,10 @@ impl ConnectionManager {
         CONNECTIONS.lock().unwrap().clear();
     }
 
-    pub fn set_current_id(id: usize) {
-        *CURRENT_CONN_ID.lock().unwrap() = Some(id);
-        CustomLogger::log(&format!("Setting current connection id to {}", id))
+    pub fn set_current_id(id: Option<usize>) {
+        *CURRENT_CONN_ID.lock().unwrap() = id;
+        
+        CustomLogger::log(&format!("Setting current connection id to {:?}", id))
     }
 
     pub fn unset_current_id() {

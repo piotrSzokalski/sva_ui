@@ -472,8 +472,13 @@ impl eframe::App for SvaUI {
                     let id = c.get_id();
                     ui.label(format!("{:?}", c));
                     if ui.button(format!("connect to port: {:?}", id)).clicked() {
-                        ConnectionManager::toggle_start_connecting();
-                        ConnectionManager::set_current_id(id.unwrap());
+                        //ConnectionManager::toggle_start_connecting();
+                        if ConnectionManager::get_current_id_index() == id {
+                            ConnectionManager::set_current_id(None);
+                        } else {
+                            ConnectionManager::set_current_id(id);
+                        }
+                        
                     }
                 }
                 
