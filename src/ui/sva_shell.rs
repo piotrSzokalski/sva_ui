@@ -26,9 +26,12 @@ use simple_virtual_assembler::assembler::assembler::Assembler;
 
 use simple_virtual_assembler::language::Language;
 
-use crate::custom_logger::CustomLogger;
-use crate::indicator;
-use crate::indicator::Indicator;
+use crate::storage::custom_logger::CustomLogger;
+
+use super::indicator::Indicator;
+
+ 
+
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct SVAShell {
     /// Id

@@ -21,10 +21,9 @@ i18n!("locales");
 
 //-------------------------------------------------------
 
-mod app;
-mod sva_shell;
-mod help_window;
-mod custom_logger;
-mod indicator;
 
-pub use app::SvaUI;
+
+pub mod ui;
+pub mod storage;
+
+pub use ui::app::SvaUI;

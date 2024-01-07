@@ -1,6 +1,6 @@
 use egui::{Context, Ui, Widget};
 
-use crate::custom_logger::CustomLogger;
+
 
 #[derive(Debug)]
 enum ValueFormat {

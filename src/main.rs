@@ -5,13 +5,14 @@ use std::fs::File;
 use std::io::{self, Write};
 
 use chrono::{DateTime, Utc};
-mod custom_logger;
+
 
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result<()> {
-    use custom_logger::CustomLogger;
+    
     use env_logger::Logger;
+    use sva_ui::storage::custom_logger::CustomLogger;
 
     std::panic::set_hook(Box::new(|panic_info| {
         // This closure will be called on panic

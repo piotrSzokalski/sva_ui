@@ -26,9 +26,7 @@ use egui_notify::{Toast, Toasts};
 
 use simple_virtual_assembler::language::Language;
 
-use crate::custom_logger::CustomLogger;
-use crate::help_window::HelpWindow;
-use crate::sva_shell::SVAShell;
+
 
 use serde::{Deserialize, Serialize};
 
@@ -36,6 +34,11 @@ use serde_json;
 
 use wasm_bindgen::prelude::*;
 use web_sys::{js_sys::Array, *};
+
+use crate::storage::custom_logger::CustomLogger;
+
+use super::help_window::HelpWindow;
+use super::sva_shell::SVAShell;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
