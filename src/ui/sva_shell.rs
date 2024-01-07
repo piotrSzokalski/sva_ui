@@ -26,11 +26,10 @@ use simple_virtual_assembler::assembler::assembler::Assembler;
 
 use simple_virtual_assembler::language::Language;
 
+use crate::storage::connections::ConnectionManager;
 use crate::storage::custom_logger::CustomLogger;
 
 use super::indicator::Indicator;
-
- 
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct SVAShell {
@@ -190,13 +189,11 @@ impl SVAShell {
     pub fn show(&mut self, ctx: &Context, ui: &mut Ui) {
         {
             self.vm_state_previous = self.vm_state;
-         
 
             match self.vm.lock() {
                 Ok(vm) => self.vm_state = vm.get_state_for_display(),
                 Err(err) => CustomLogger::log(&format!("{:?}", err)),
             }
-            
         }
         let (acc, pc, flag, r, p, vm_status, delay) = self.vm_state;
 
@@ -231,10 +228,18 @@ impl SVAShell {
                         }
 
                         match vm_status {
-                            VmStatus::Initial => self.control_button_text = t!("sva_shell.button.start").to_owned(),
-                            VmStatus::Running => self.control_button_text = t!("sva_shell.button.stop").to_owned(),
-                            VmStatus::Stopped => self.control_button_text = t!("sva_shell.button.resume").to_owned(),
-                            VmStatus::Finished => self.control_button_text = t!("sva_shell.button.start").to_owned(),
+                            VmStatus::Initial => {
+                                self.control_button_text = t!("sva_shell.button.start").to_owned()
+                            }
+                            VmStatus::Running => {
+                                self.control_button_text = t!("sva_shell.button.stop").to_owned()
+                            }
+                            VmStatus::Stopped => {
+                                self.control_button_text = t!("sva_shell.button.resume").to_owned()
+                            }
+                            VmStatus::Finished => {
+                                self.control_button_text = t!("sva_shell.button.start").to_owned()
+                            }
                         }
 
                         if vm_status == VmStatus::Running || vm_status == VmStatus::Stopped {
@@ -348,6 +353,23 @@ impl SVAShell {
                             4.0,
                             *self.port_colors.get(index).unwrap_or(&Color32::LIGHT_GRAY),
                         ));
+                        if ui.button(format!("<>{:?}", p)).clicked() {
+                            if let Some(conn_index) = ConnectionManager::get_current_id_index() {
+                                if let Some(conn) = ConnectionManager::get_connections()
+                                    .lock()
+                                    .unwrap()
+                                    .get_mut(conn_index)
+                                {
+                                    let id = self.id.to_string() + "P" + &index.to_string();
+                                    self.vm.lock().unwrap().connect_with_id(index, conn, id);
+                                }
+                            }
+
+                            if let Some(conn) = ConnectionManager::get_connection_to_current() {
+                                let id = self.id.to_string() + "P" + &index.to_string();
+                                self.vm.lock().unwrap().connect_with_id(index, conn, id);
+                            }
+                        }
 
                         if ui.add_enabled(true, port_button).clicked() {
                             CustomLogger::log(&format!(
@@ -368,10 +390,6 @@ impl SVAShell {
                                     {
                                         let id = self.id.to_string() + "P" + &index.to_string();
 
-                                        let a = String::from("a");
-                                        let b = String::from("b");
-
-                                        let c = a + &b;
                                         CustomLogger::log(&format!(
                                             "Connecting port: {}P{}",
                                             self.get_id(),
@@ -428,10 +446,10 @@ impl SVAShell {
                 //temp
                 //self.vm = Arc::new(Mutex::new(VirtualMachine::new_with_program(program)));
                 {
-                   match self.vm.lock() {
-                    Ok(mut vm) => vm.load_program(program),
-                    Err(err) => CustomLogger::log(&format!("{:?}", err)),
-                }
+                    match self.vm.lock() {
+                        Ok(mut vm) => vm.load_program(program),
+                        Err(err) => CustomLogger::log(&format!("{:?}", err)),
+                    }
                 }
                 //self.vm.load_program(program);
                 self.parsing_error = None

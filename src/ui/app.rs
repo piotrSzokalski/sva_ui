@@ -35,6 +35,7 @@ use serde_json;
 use wasm_bindgen::prelude::*;
 use web_sys::{js_sys::Array, *};
 
+use crate::storage::connections::{ConnectionManager, CONNECTING_STATE};
 use crate::storage::custom_logger::CustomLogger;
 
 use super::help_window::HelpWindow;
@@ -239,7 +240,10 @@ impl SvaUI {
         egui::Window::new(t!("window.debug"))
             .open(&mut self.debug_mode)
             .show(ctx, |ui| {
-                ui.collapsing("variables", |ui| {});
+                ui.collapsing("variables", |ui| {
+                    ui.label("Connection state");
+                    ui.label(format!("{:?}", CONNECTING_STATE));
+                });
                 ui.collapsing("logs", |ui| {
                     ScrollArea::vertical().max_height(600.0).show(ui, |ui| {
                         let logs = CustomLogger::get_logs_c();
@@ -328,6 +332,7 @@ impl eframe::App for SvaUI {
                     if ui.button(t!("button.clear")).clicked() {
                         self.vms.clear();
                         self.connections = Rc::new(RefCell::new(Vec::new()));
+                        ConnectionManager::clear_connections();
                     }
                     ui.separator();
 
@@ -433,6 +438,25 @@ impl eframe::App for SvaUI {
             ui.collapsing("connections", |ui| {
                 let c = self.connections.clone();
                 ui.label(format!("{:?}", c));
+            });
+            ui.collapsing("CONN", |ui| {
+                if ui.button("add").clicked() {
+                    ConnectionManager::create_connection();
+                }
+                ui.separator();
+
+                
+                let conns = ConnectionManager::get_connections().lock().unwrap().clone();
+                for mut c in conns {
+                    let id = c.get_id();
+                    ui.label(format!("{:?}", c));
+                    if ui.button(format!("connect to port: {:?}", id)).clicked() {
+                        ConnectionManager::toggle_start_connecting();
+                        ConnectionManager::set_current_id(id.unwrap());
+                    }
+                }
+                
+
             });
             ui.separator();
 
