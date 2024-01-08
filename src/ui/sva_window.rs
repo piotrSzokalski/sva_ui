@@ -29,10 +29,10 @@ use simple_virtual_assembler::language::Language;
 use crate::storage::connections::ConnectionManager;
 use crate::storage::custom_logger::CustomLogger;
 
-use super::indicator::Indicator;
+use super::indicator_widget::IndicatorWidget;
 
 #[derive(serde::Deserialize, serde::Serialize)]
-pub struct SVAShell {
+pub struct SVAWindow {
     /// Id
     id: i32,
     /// Tile
@@ -81,10 +81,10 @@ pub struct SVAShell {
 
     vm_state_previous: (i32, usize, Flag, [i32; 4], [i32; 4], VmStatus, u32),
     #[serde(skip)]
-    indicators: [Indicator; 13],
+    indicators: [IndicatorWidget; 13],
 }
 
-impl Default for SVAShell {
+impl Default for SVAWindow {
     fn default() -> Self {
         Self {
             id: -1,
@@ -107,25 +107,25 @@ impl Default for SVAShell {
             vm_state: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
             vm_state_previous: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
             indicators: [
-                Indicator::new("acc".to_owned()),
-                Indicator::new("pc".to_owned()),
-                Indicator::new("flag".to_owned()),
-                Indicator::new("r0".to_owned()),
-                Indicator::new("r1".to_owned()),
-                Indicator::new("r2".to_owned()),
-                Indicator::new("r3".to_owned()),
-                Indicator::new("p0".to_owned()),
-                Indicator::new("p1".to_owned()),
-                Indicator::new("p2".to_owned()),
-                Indicator::new("p3".to_owned()),
-                Indicator::new("status".to_owned()),
-                Indicator::new("delay".to_owned()),
+                IndicatorWidget::new("acc".to_owned()),
+                IndicatorWidget::new("pc".to_owned()),
+                IndicatorWidget::new("flag".to_owned()),
+                IndicatorWidget::new("r0".to_owned()),
+                IndicatorWidget::new("r1".to_owned()),
+                IndicatorWidget::new("r2".to_owned()),
+                IndicatorWidget::new("r3".to_owned()),
+                IndicatorWidget::new("p0".to_owned()),
+                IndicatorWidget::new("p1".to_owned()),
+                IndicatorWidget::new("p2".to_owned()),
+                IndicatorWidget::new("p3".to_owned()),
+                IndicatorWidget::new("status".to_owned()),
+                IndicatorWidget::new("delay".to_owned()),
             ],
         }
     }
 }
 
-impl SVAShell {
+impl SVAWindow {
     pub fn new(
         id: i32,
         title: String,
@@ -133,8 +133,8 @@ impl SVAShell {
         connections: Rc<RefCell<Vec<Connection>>>,
         disconnect_mode: Rc<RefCell<bool>>,
         current_color_for_connection: Color32,
-    ) -> SVAShell {
-        let mut s = SVAShell {
+    ) -> SVAWindow {
+        let mut s = SVAWindow {
             id,
             title,
             vm: Arc::new(Mutex::new(VirtualMachine::new())),

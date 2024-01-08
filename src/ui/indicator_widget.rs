@@ -17,14 +17,14 @@ impl Default for ValueFormat {
 }
 
 #[derive(Default)]
-pub struct Indicator {
+pub struct IndicatorWidget {
     data: i32,
     format: ValueFormat,
     text: String,
     label: String,
 }
 
-impl Indicator {
+impl IndicatorWidget {
     pub fn new(label: String) -> Self {
         Self {
             data: Default::default(),
@@ -33,12 +33,12 @@ impl Indicator {
             label,
         }
     }
-    pub fn set(&mut self, data: i32, label: &str) -> &mut Indicator {
+    pub fn set(&mut self, data: i32, label: &str) -> &mut IndicatorWidget {
         self.data = data;
         self.label= label.to_string();
         self
     }
-    pub fn set_data(&mut self, data: i32) -> &mut Indicator {
+    pub fn set_data(&mut self, data: i32) -> &mut IndicatorWidget {
         self.data = data;
         self
     }

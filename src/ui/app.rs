@@ -35,11 +35,12 @@ use serde_json;
 use wasm_bindgen::prelude::*;
 use web_sys::{js_sys::Array, *};
 
-use crate::storage::connections::{ConnectionManager, CONNECTING_STATE, self};
+use crate::storage::connections::{ConnectionManager, self, CONNECTION_NAMES};
 use crate::storage::custom_logger::CustomLogger;
 
+use super::connection_widget::ConnectionWidget;
 use super::help_window::HelpWindow;
-use super::sva_shell::SVAShell;
+use super::sva_window::SVAWindow;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -48,7 +49,7 @@ pub struct SvaUI {
     language: Language,
     //vm_shell: SVAShell,
     //#[serde(skip)]
-    vms: Vec<SVAShell>,
+    vms: Vec<SVAWindow>,
     connections: Rc<RefCell<Vec<Connection>>>,
     #[serde(skip)]
     connection_started: Rc<RefCell<bool>>,
@@ -262,7 +263,8 @@ impl SvaUI {
             .show(ctx, |ui| {
                 ui.collapsing("variables", |ui| {
                     ui.label("Connection state");
-                    ui.label(format!("{:?}", CONNECTING_STATE));
+                    ui.separator();
+                    ui.label(format!("{:?}", CONNECTION_NAMES));
                 });
                 ui.collapsing("logs", |ui| {
                     ScrollArea::vertical().max_height(600.0).show(ui, |ui| {
@@ -360,7 +362,7 @@ impl eframe::App for SvaUI {
                     ui.menu_button(t!("button.add"), |ui| {
                         if ui.button("vm").clicked() {
                             let id = self.vms.last().map_or(0, |last| last.get_id() + 1);
-                            let mut x = SVAShell::new(
+                            let mut x = SVAWindow::new(
                                 id,
                                 "Vm".to_string(),
                                 self.connection_started.clone(),
@@ -456,30 +458,18 @@ impl eframe::App for SvaUI {
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
 
+
             ui.collapsing("connections", |ui| {
-                let c = self.connections.clone();
-                ui.label(format!("{:?}", c));
-            });
-            ui.collapsing("CONN", |ui| {
                 if ui.button("add").clicked() {
                     ConnectionManager::create_connection();
                 }
+   
                 ui.separator();
 
                 
                 let conns = ConnectionManager::get_connections().lock().unwrap().clone();
                 for mut c in conns {
-                    let id = c.get_id();
-                    ui.label(format!("{:?}", c));
-                    if ui.button(format!("connect to port: {:?}", id)).clicked() {
-                        //ConnectionManager::toggle_start_connecting();
-                        if ConnectionManager::get_current_id_index() == id {
-                            ConnectionManager::set_current_id(None);
-                        } else {
-                            ConnectionManager::set_current_id(id);
-                        }
-                        
-                    }
+                    ConnectionWidget::new(c).show(ctx, ui);
                 }
                 
 
