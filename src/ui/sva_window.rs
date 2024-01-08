@@ -375,11 +375,7 @@ impl SVAWindow {
                                     index += 1;
                                 }
                             }
-
-                            //ui.button(format!("{:?}", self.vm.get_ports()));
                         });
-
-                        //ui.label(self.vm.to_string());
                     });
                 if self.delay_ms > 10 {
                     ctx.request_repaint_after(Duration::from_millis(self.delay_ms));

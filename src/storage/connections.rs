@@ -12,7 +12,7 @@ use once_cell::sync::Lazy;
 pub static CONNECTIONS: Lazy<Arc<Mutex<Vec<Connection>>>> =
     Lazy::new(|| Arc::new(Mutex::new(Vec::new())));
 
-pub static NEXT_CONN_ID: Mutex<usize> = Mutex::new(0);
+pub static NEXT_CONN_ID: Mutex<usize> = Mutex::new(1);
 
 static CURRENT_CONN_ID: Mutex<Option<usize>> = Mutex::new(None);
 
@@ -49,7 +49,7 @@ impl ConnectionManager {
     }
 
     pub fn set_names(names: HashMap<usize, String>) {
-        * CONNECTION_NAMES.lock().unwrap() = names;
+        *CONNECTION_NAMES.lock().unwrap() = names;
     }
 
     pub fn get_connections() -> Arc<Mutex<Vec<Connection>>> {
@@ -73,14 +73,26 @@ impl ConnectionManager {
     }
 
     pub fn set_current_id(id: Option<usize>) {
-        *CURRENT_CONN_ID.lock().unwrap() = id;
+        CustomLogger::log(&format!(
+            "Setting current connection id to {:?}",
+            id.clone()
+        ));
+        {
+            *CURRENT_CONN_ID.lock().unwrap() = id;
+        }
+        CustomLogger::log(&format!(
+            "NOW IT IS SET TO    {:?}",
+            CURRENT_CONN_ID.lock().unwrap()
+        ));
         *DISCONNECT_MODE.lock().unwrap() = false;
-
-        CustomLogger::log(&format!("Setting current connection id to {:?}", id))
     }
 
     pub fn unset_current_id() {
         *CURRENT_CONN_ID.lock().unwrap() = None;
+    }
+
+    pub fn get_current_id() -> Option<usize> {
+        *CURRENT_CONN_ID.lock().unwrap()
     }
 
     pub fn get_current_id_index() -> Option<usize> {

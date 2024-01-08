@@ -10,7 +10,7 @@ use std::{fmt::Display, fs::File};
 use eframe::glow::NONE;
 use egui::epaint::tessellator::path;
 use egui::{containers::Window, Context};
-use egui::{Button, Color32, Label, ScrollArea, Stroke, Ui};
+use egui::{Button, Color32, CursorIcon, Label, ScrollArea, Stroke, Ui};
 use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 
 use egui_file::FileDialog;
@@ -178,7 +178,6 @@ impl SvaUI {
         self.connections_copy.clear();
         ConnectionManager::set_names(self.conn_names_copies.clone());
         self.conn_names_copies.clear();
-
     }
 
     fn reconnect_ports(&mut self) {
@@ -271,6 +270,8 @@ impl SvaUI {
                     ui.label("Connection state");
                     ui.separator();
                     ui.label(format!("{:?}", CONNECTION_NAMES));
+                    ui.separator();
+                    ui.label(format!("{:?}", ConnectionManager::get_current_id_index()));
                 });
                 ui.collapsing("logs", |ui| {
                     ScrollArea::vertical().max_height(600.0).show(ui, |ui| {
@@ -383,57 +384,6 @@ impl eframe::App for SvaUI {
                         }
                     });
 
-                    let mut connection_button_text = "connect";
-                    let mut disconnect_button_text = "diconnect";
-                    let mut change_current_connection_color = false;
-
-                    if *self.connection_started.borrow_mut() {
-                        ctx.set_cursor_icon(egui::CursorIcon::Cell);
-                        connection_button_text = "Stop connecting";
-                        disconnect_button_text = "disconnect";
-                    } else if *self.disconnect_mode.borrow_mut() {
-                        ctx.set_cursor_icon(egui::CursorIcon::NotAllowed);
-                        disconnect_button_text = "stop disconnecting";
-                        connection_button_text = "connect";
-                    } else {
-                        ctx.set_cursor_icon(egui::CursorIcon::Default);
-                        connection_button_text = "connect";
-                        disconnect_button_text = "disconnect";
-                    }
-
-                    let start_connection_button =
-                        Button::new(connection_button_text).stroke(Stroke::new(
-                            4.0,
-                            self.port_connections_color_palle
-                                [self.current_port_connection_color_index],
-                        ));
-
-                    if !*self.disconnect_mode.borrow_mut() {
-                        if ui.add_enabled(true, start_connection_button).clicked() {
-                            let mut conn_started = self.connection_started.borrow_mut();
-                            *conn_started = !*conn_started;
-
-                            *self.disconnect_mode.borrow_mut() = false;
-
-                            if *conn_started {
-                                let mut conn = Connection::new();
-                                self.connections.borrow_mut().push(conn);
-                            } else {
-                                change_current_connection_color = true;
-                            }
-                        }
-                    }
-                    if change_current_connection_color {
-                        self.switch_port_connection_color();
-                    }
-
-                    if !*self.connection_started.borrow_mut() {
-                        if ui.button(disconnect_button_text).clicked() {
-                            let mut dissconnec_mode = self.disconnect_mode.borrow_mut();
-                            *dissconnec_mode = !*dissconnec_mode;
-                        }
-                    }
-
                     ctx.set_cursor_icon(egui::CursorIcon::Default);
                     // cursor
                     if ConnectionManager::get_current_id_index().is_some() {
@@ -467,7 +417,7 @@ impl eframe::App for SvaUI {
             // The central panel the region left after adding TopPanel's and SidePanel's
 
             ui.collapsing("connections", |ui| {
-                ui.horizontal(|ui|{
+                ui.horizontal(|ui| {
                     if ui.button("add").clicked() {
                         ConnectionManager::create_connection();
                     }
