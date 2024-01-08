@@ -1,6 +1,8 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
-use egui::ahash::{HashMap, HashMapExt};
 use simple_virtual_assembler::components::connection::Connection;
 
 use super::custom_logger::CustomLogger;
@@ -38,8 +40,16 @@ impl ConnectionManager {
         CONNECTION_NAMES.lock().unwrap().get(&id).cloned()
     }
 
+    pub fn get_names() -> HashMap<usize, String> {
+        CONNECTION_NAMES.lock().unwrap().clone()
+    }
+
     pub fn set_name(id: usize, new_name: String) {
         *CONNECTION_NAMES.lock().unwrap().get_mut(&id).unwrap() = new_name;
+    }
+
+    pub fn set_names(names: HashMap<usize, String>) {
+        * CONNECTION_NAMES.lock().unwrap() = names;
     }
 
     pub fn get_connections() -> Arc<Mutex<Vec<Connection>>> {

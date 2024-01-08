@@ -1,4 +1,5 @@
 use std::cell::{Ref, RefCell};
+use std::collections::HashMap;
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
@@ -75,6 +76,8 @@ pub struct SvaUI {
     toasts: Toasts,
 
     connections_copy: Vec<Connection>,
+
+    conn_names_copies: HashMap<usize, String>,
 }
 
 impl Default for SvaUI {
@@ -99,6 +102,7 @@ impl Default for SvaUI {
             save_file_dialog: None,
             toasts: Toasts::default(),
             connections_copy: Default::default(),
+            conn_names_copies: HashMap::new(),
         }
     }
 }
@@ -114,7 +118,7 @@ impl SvaUI {
         rust_i18n::set_locale("en");
         if let Some(storage) = cc.storage {
             let mut sav_ui: SvaUI = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
-            sav_ui.set_connections();
+            sav_ui.set_connections_and_their_names();
             sav_ui.reconnect_ports();
             sav_ui.logger = CustomLogger::new();
             sav_ui.resned_refrences();
@@ -161,16 +165,20 @@ impl SvaUI {
         }
     }
 
-    fn copy_connections(&mut self) {
+    fn copy_connections_and_their_names(&mut self) {
         self.connections_copy = ConnectionManager::get_connections().lock().unwrap().clone();
         CustomLogger::log("Copying connections");
         CustomLogger::log(&format!("{:?}", self.connections_copy));
         CustomLogger::log("________________________________________");
+        self.conn_names_copies = ConnectionManager::get_names();
     }
 
-    fn set_connections(&mut self) {
+    fn set_connections_and_their_names(&mut self) {
         ConnectionManager::set_connection(self.connections_copy.clone());
         self.connections_copy.clear();
+        ConnectionManager::set_names(self.conn_names_copies.clone());
+        self.conn_names_copies.clear();
+
     }
 
     fn reconnect_ports(&mut self) {
@@ -201,11 +209,11 @@ impl SvaUI {
     }
     // RENDMEVER TO DIS CONNECT and RECONTECT
     fn export_to_file(&mut self, path: String) {
-        self.copy_connections();
+        self.copy_connections_and_their_names();
         self.disconnect_ports();
 
         let serialized_state = serde_json::to_string(&self);
-        self.set_connections();
+        self.set_connections_and_their_names();
         self.reconnect_ports();
         self.resned_refrences();
 
@@ -233,7 +241,7 @@ impl SvaUI {
                 match json {
                     Ok(sva_ui) => {
                         *self = sva_ui;
-                        self.set_connections();
+                        self.set_connections_and_their_names();
                         self.reconnect_ports();
                         self.resned_refrences();
                     }
@@ -283,7 +291,7 @@ impl SvaUI {
 impl eframe::App for SvaUI {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        self.copy_connections();
+        self.copy_connections_and_their_names();
         self.disconnect_ports();
         eframe::set_value(storage, eframe::APP_KEY, self);
     }

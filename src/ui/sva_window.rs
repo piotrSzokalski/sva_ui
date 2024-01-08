@@ -369,13 +369,6 @@ impl SVAWindow {
                                     } else if ConnectionManager::in_disconnect_mode() {
                                         self.vm.lock().unwrap().disconnect(index);
                                     }
-
-                                    // if let Some(conn) =
-                                    //     ConnectionManager::get_connection_to_current()
-                                    // {
-                                    //     let id = self.id.to_string() + "P" + &index.to_string();
-                                    //     self.vm.lock().unwrap().connect_with_id(index, conn, id);
-                                    // }
                                 }
 
                                 if index < 4 {
