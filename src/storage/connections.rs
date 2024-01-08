@@ -7,15 +7,17 @@ use super::custom_logger::CustomLogger;
 
 use once_cell::sync::Lazy;
 
-static CONNECTIONS: Lazy<Arc<Mutex<Vec<Connection>>>> =
+pub static CONNECTIONS: Lazy<Arc<Mutex<Vec<Connection>>>> =
     Lazy::new(|| Arc::new(Mutex::new(Vec::new())));
 
-static NEXT_CONN_ID: Mutex<usize> = Mutex::new(0);
+pub static NEXT_CONN_ID: Mutex<usize> = Mutex::new(0);
 
 static CURRENT_CONN_ID: Mutex<Option<usize>> = Mutex::new(None);
 
 pub static CONNECTION_NAMES: Lazy<Mutex<HashMap<usize, String>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
+
+pub static DISCONNECT_MODE: Lazy<Arc<Mutex<bool>>> = Lazy::new(|| Arc::new(Mutex::new(false)));
 
 pub struct ConnectionManager {}
 
@@ -45,8 +47,15 @@ impl ConnectionManager {
     }
 
     pub fn set_connection(state: Vec<Connection>) {
+        let id = match state.last() {
+            Some(conn) => conn.get_id(),
+            None => Some(0),
+        };
+
         CustomLogger::log(&format!("Setting connectinos \n to {:?}", state));
         *CONNECTIONS.lock().unwrap() = state;
+
+        *NEXT_CONN_ID.lock().unwrap() = id.unwrap_or(0) + 1;
     }
 
     pub fn clear_connections() {
@@ -55,6 +64,7 @@ impl ConnectionManager {
 
     pub fn set_current_id(id: Option<usize>) {
         *CURRENT_CONN_ID.lock().unwrap() = id;
+        *DISCONNECT_MODE.lock().unwrap() = false;
 
         CustomLogger::log(&format!("Setting current connection id to {:?}", id))
     }
@@ -78,5 +88,18 @@ impl ConnectionManager {
             return None;
         }
         None
+    }
+
+    pub fn in_disconnect_mode() -> bool {
+        *DISCONNECT_MODE.lock().unwrap()
+    }
+
+    pub fn toggle_disconnect_mode() {
+        let mut current = false;
+        *CURRENT_CONN_ID.lock().unwrap() = None;
+        {
+            current = !*DISCONNECT_MODE.lock().unwrap();
+        }
+        *DISCONNECT_MODE.lock().unwrap() = current;
     }
 }

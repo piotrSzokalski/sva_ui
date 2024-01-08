@@ -26,8 +26,6 @@ use egui_notify::{Toast, Toasts};
 
 use simple_virtual_assembler::language::Language;
 
-
-
 use serde::{Deserialize, Serialize};
 
 use serde_json;
@@ -35,7 +33,7 @@ use serde_json;
 use wasm_bindgen::prelude::*;
 use web_sys::{js_sys::Array, *};
 
-use crate::storage::connections::{ConnectionManager, self, CONNECTION_NAMES};
+use crate::storage::connections::{self, ConnectionManager, CONNECTION_NAMES};
 use crate::storage::custom_logger::CustomLogger;
 
 use super::connection_widget::ConnectionWidget;
@@ -76,7 +74,7 @@ pub struct SvaUI {
     #[serde(skip)]
     toasts: Toasts,
 
-    connections_copy: Vec<Connection>
+    connections_copy: Vec<Connection>,
 }
 
 impl Default for SvaUI {
@@ -221,8 +219,8 @@ impl SvaUI {
             }
             Err(err) => {
                 self.toasts
-                .info(t!("error.export.cant_serialize"))
-                .set_duration(Some(Duration::from_secs(10)));
+                    .info(t!("error.export.cant_serialize"))
+                    .set_duration(Some(Duration::from_secs(10)));
             }
         };
     }
@@ -250,8 +248,8 @@ impl SvaUI {
             Err(err) => {
                 CustomLogger::log(&format!("Could not open file \n {}", err));
                 self.toasts
-                            .info(t!("error.file.cant_open"))
-                            .set_duration(Some(Duration::from_secs(10)));
+                    .info(t!("error.file.cant_open"))
+                    .set_duration(Some(Duration::from_secs(10)));
             }
         }
     }
@@ -347,7 +345,7 @@ impl eframe::App for SvaUI {
                         });
                     ui.separator();
                     ui.add(
-                        egui::Slider::new(&mut self.ui_size, 0.75..=3.0)
+                        egui::Slider::new(&mut self.ui_size, 0.75..=2.25)
                             .step_by(0.25)
                             .text("ui scale"),
                     );
@@ -421,17 +419,19 @@ impl eframe::App for SvaUI {
                         self.switch_port_connection_color();
                     }
 
-                    // let ttt = Button::new(change_current_connection_color.to_string()).fill(
-                    //     self.port_connections_color_palle[self.current_port_connection_color_index],
-                    // );
-
-                    //ui.add(ttt);
-
                     if !*self.connection_started.borrow_mut() {
                         if ui.button(disconnect_button_text).clicked() {
                             let mut dissconnec_mode = self.disconnect_mode.borrow_mut();
                             *dissconnec_mode = !*dissconnec_mode;
                         }
+                    }
+
+                    ctx.set_cursor_icon(egui::CursorIcon::Default);
+                    // cursor
+                    if ConnectionManager::get_current_id_index().is_some() {
+                        ctx.set_cursor_icon(egui::CursorIcon::Cell);
+                    } else if ConnectionManager::in_disconnect_mode() {
+                        ctx.set_cursor_icon(egui::CursorIcon::NotAllowed);
                     }
 
                     if ui.button(t!("label.help")).clicked() {
@@ -458,21 +458,26 @@ impl eframe::App for SvaUI {
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
 
-
             ui.collapsing("connections", |ui| {
-                if ui.button("add").clicked() {
-                    ConnectionManager::create_connection();
-                }
-   
-                ui.separator();
+                ui.horizontal(|ui|{
+                    if ui.button("add").clicked() {
+                        ConnectionManager::create_connection();
+                    }
+                    if ui.button("disconnect").clicked() {
+                        ConnectionManager::toggle_disconnect_mode();
+                    }
+                });
 
-                
-                let conns = ConnectionManager::get_connections().lock().unwrap().clone();
-                for mut c in conns {
-                    ConnectionWidget::new(c).show(ctx, ui);
-                }
-                
+                egui::ScrollArea::vertical()
+                    .max_height(200.0)
+                    .show(ui, |ui| {
+                        ui.separator();
 
+                        let conns = ConnectionManager::get_connections().lock().unwrap().clone();
+                        for mut c in conns {
+                            ConnectionWidget::new(c).show(ctx, ui);
+                        }
+                    });
             });
             ui.separator();
 

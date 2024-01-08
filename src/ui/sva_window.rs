@@ -82,6 +82,8 @@ pub struct SVAWindow {
     vm_state_previous: (i32, usize, Flag, [i32; 4], [i32; 4], VmStatus, u32),
     #[serde(skip)]
     indicators: [IndicatorWidget; 13],
+
+    conn_ids: [Option<usize>; 4],
 }
 
 impl Default for SVAWindow {
@@ -121,6 +123,7 @@ impl Default for SVAWindow {
                 IndicatorWidget::new("status".to_owned()),
                 IndicatorWidget::new("delay".to_owned()),
             ],
+            conn_ids: [None; 4],
         }
     }
 }
@@ -155,6 +158,7 @@ impl SVAWindow {
             vm_state: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
             vm_state_previous: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
             indicators: Default::default(),
+            conn_ids: [None; 4],
         };
         s.vm.lock().unwrap().set_delay(1000);
         s
@@ -200,240 +204,196 @@ impl SVAWindow {
         egui::Window::new(&self.id.to_string())
             .open(&mut true)
             .show(ctx, |ui| {
-                ui.vertical(|ui| {});
-                if ui
-                    .add(egui::Slider::new(&mut self.delay_ms, 0..=5000).text("delay"))
-                    .changed()
-                {
-                    self.vm
-                        .lock()
-                        .unwrap()
-                        .set_delay(self.delay_ms.try_into().unwrap());
-                }
-
-                if let Some(parsing_error) = &self.parsing_error {
-                    // ui.label(parsing_error.to_string());
-                    ui.label(
-                        egui::RichText::new(parsing_error.to_string())
-                            .color(egui::Color32::from_rgb(255, 0, 0)),
-                    );
-                } else {
-                    ui.horizontal(|ui| {
-                        // if ui.button("run").clicked() {
-                        //     self.assemble_and_run();
-                        // }
-
-                        if vm_status == VmStatus::Running {
-                            self.control_button_text = t!("sva_shell.button.stop").to_owned();
+                egui::ScrollArea::vertical()
+                    .max_height(500.0)
+                    .show(ui, |ui| {
+                        ui.vertical(|ui| {});
+                        if ui
+                            .add(egui::Slider::new(&mut self.delay_ms, 0..=5000).text("delay"))
+                            .changed()
+                        {
+                            self.vm
+                                .lock()
+                                .unwrap()
+                                .set_delay(self.delay_ms.try_into().unwrap());
                         }
 
-                        match vm_status {
-                            VmStatus::Initial => {
-                                self.control_button_text = t!("sva_shell.button.start").to_owned()
-                            }
-                            VmStatus::Running => {
-                                self.control_button_text = t!("sva_shell.button.stop").to_owned()
-                            }
-                            VmStatus::Stopped => {
-                                self.control_button_text = t!("sva_shell.button.resume").to_owned()
-                            }
-                            VmStatus::Finished => {
-                                self.control_button_text = t!("sva_shell.button.start").to_owned()
-                            }
-                        }
-
-                        if vm_status == VmStatus::Running || vm_status == VmStatus::Stopped {
-                            if ui.button(t!("sva_shell.button.halt")).clicked() {
-                                VirtualMachine::halt(self.vm.clone());
-                            }
-                        }
-
-                        if ui.button(&self.control_button_text).clicked() {
-                            {
-                                self.vm
-                                    .lock()
-                                    .unwrap()
-                                    .set_delay(self.delay_ms.try_into().unwrap());
-                            }
-                            match vm_status {
-                                VmStatus::Initial => {
-                                    VirtualMachine::start(self.vm.clone());
+                        if let Some(parsing_error) = &self.parsing_error {
+                            ui.label(
+                                egui::RichText::new(parsing_error.to_string())
+                                    .color(egui::Color32::from_rgb(255, 0, 0)),
+                            );
+                        } else {
+                            ui.horizontal(|ui| {
+                                if vm_status == VmStatus::Running {
+                                    self.control_button_text =
+                                        t!("sva_shell.button.stop").to_owned();
                                 }
-                                VmStatus::Running => {
-                                    VirtualMachine::stop(self.vm.clone());
+
+                                match vm_status {
+                                    VmStatus::Initial => {
+                                        self.control_button_text =
+                                            t!("sva_shell.button.start").to_owned()
+                                    }
+                                    VmStatus::Running => {
+                                        self.control_button_text =
+                                            t!("sva_shell.button.stop").to_owned()
+                                    }
+                                    VmStatus::Stopped => {
+                                        self.control_button_text =
+                                            t!("sva_shell.button.resume").to_owned()
+                                    }
+                                    VmStatus::Finished => {
+                                        self.control_button_text =
+                                            t!("sva_shell.button.start").to_owned()
+                                    }
                                 }
-                                VmStatus::Stopped => {
-                                    VirtualMachine::resume(self.vm.clone());
-                                }
-                                VmStatus::Finished => {
-                                    VirtualMachine::start(self.vm.clone());
-                                }
-                            }
-                        }
 
-                        if ui.button(t!("sva_shell.button.step")).clicked() {
-                            self.step();
-                        }
-                        if ui.button(t!("sva_shell.button.reset")).clicked() {
-                            self.vm.lock().unwrap().clear_registers();
-                        }
-                    });
-                }
-
-                //
-                let id = ui.make_persistent_id("Vm code heder");
-                egui::collapsing_header::CollapsingState::load_with_default_open(
-                    ui.ctx(),
-                    id,
-                    false,
-                )
-                .show_header(ui, |ui| {
-                    ui.heading(t!("sva_shell.code_block"));
-                })
-                .body(|ui| {
-                    egui::ScrollArea::vertical()
-                        .max_height(600.0)
-                        .show(ui, |ui| {
-                            // if ui.text_edit_multiline(&mut self.code).highlight().changed() {
-                            //     self.try_assemble_and_load();
-                            // }
-
-                            CodeEditor::default()
-                                .id_source("code editor")
-                                .with_rows(12)
-                                .with_fontsize(14.0)
-                                .with_theme(ColorTheme::GRUVBOX)
-                                .with_syntax(Syntax::rust())
-                                .with_numlines(true)
-                                .show(ui, &mut self.code);
-                        });
-
-                    self.try_assemble_and_load();
-                });
-                //
-
-                // ui.collapsing("code", |ui| {
-                //     egui::ScrollArea::vertical()
-                //         .max_height(600.0)
-                //         .show(ui, |ui| {
-                //             if ui.text_edit_multiline(&mut self.code).highlight().changed() {
-                //                 self.try_assemble_and_load();
-                //             }
-                //         });
-                // });
-
-                let labels = ["acc", "pc", "flag", "r:0-3", "p:0-3", "status", "delay"];
-
-                ui.horizontal(|ui| {
-                    self.indicators[0].set(acc, "acc").show(ctx, ui);
-                    self.indicators[1]
-                        .set(pc.try_into().unwrap_or(0), "pc")
-                        .show(ctx, ui);
-
-                    // flag
-                    ui.label("flag");
-                    ui.button(flag.to_string());
-
-                    self.indicators[2].set(r[0], "r0").show(ctx, ui);
-                    self.indicators[2].set(r[1], "r1").show(ctx, ui);
-                    self.indicators[2].set(r[2], "r2").show(ctx, ui);
-                    self.indicators[2].set(r[3], "r3").show(ctx, ui);
-                });
-
-                ui.vertical(|ui| {
-                    ui.label("p 0-3");
-                    let ports;
-
-                    {
-                        ports = self.vm.lock().unwrap().get_ports();
-                    }
-                    let mut index = 0;
-                    for p in ports {
-                        let port_button = Button::new(format!("{:?}", p)).stroke(Stroke::new(
-                            4.0,
-                            *self.port_colors.get(index).unwrap_or(&Color32::LIGHT_GRAY),
-                        ));
-                        if ui.button(format!("<>{:?}", p)).clicked() {
-                            if let Some(conn_index) = ConnectionManager::get_current_id_index() {
-                                if let Some(conn) = ConnectionManager::get_connections()
-                                    .lock()
-                                    .unwrap()
-                                    .get_mut(conn_index)
+                                if vm_status == VmStatus::Running || vm_status == VmStatus::Stopped
                                 {
-                                    let id = self.id.to_string() + "P" + &index.to_string();
-                                    self.vm.lock().unwrap().connect_with_id(index, conn, id);
+                                    if ui.button(t!("sva_shell.button.halt")).clicked() {
+                                        VirtualMachine::halt(self.vm.clone());
+                                    }
                                 }
-                            }
 
-                            if let Some(conn) = ConnectionManager::get_connection_to_current() {
-                                let id = self.id.to_string() + "P" + &index.to_string();
-                                self.vm.lock().unwrap().connect_with_id(index, conn, id);
-                            }
-                        }
-
-                        if ui.add_enabled(true, port_button).clicked() {
-                            CustomLogger::log(&format!(
-                                "PORT CLICKED: {}P{}",
-                                self.get_id(),
-                                index
-                            ));
-                            let mut conn_started = self.connection_started.borrow_mut();
-
-                            let connections = &mut self.connections.borrow_mut();
-
-                            let disconnect_mode = self.disconnect_mode.borrow_mut();
-
-                            if *conn_started {
-                                // connect port
-                                CustomLogger::log("Should connect");
-                                if let Some(mut conn) = connections.last_mut() {
+                                if ui.button(&self.control_button_text).clicked() {
                                     {
-                                        let id = self.id.to_string() + "P" + &index.to_string();
-
-                                        CustomLogger::log(&format!(
-                                            "Connecting port: {}P{}",
-                                            self.get_id(),
-                                            index
-                                        ));
                                         self.vm
                                             .lock()
                                             .unwrap()
-                                            .connect_with_id(index, &mut conn, id);
+                                            .set_delay(self.delay_ms.try_into().unwrap());
+                                    }
+                                    match vm_status {
+                                        VmStatus::Initial => {
+                                            VirtualMachine::start(self.vm.clone());
+                                        }
+                                        VmStatus::Running => {
+                                            VirtualMachine::stop(self.vm.clone());
+                                        }
+                                        VmStatus::Stopped => {
+                                            VirtualMachine::resume(self.vm.clone());
+                                        }
+                                        VmStatus::Finished => {
+                                            VirtualMachine::start(self.vm.clone());
+                                        }
                                     }
                                 }
-                                // change background color
-                                self.port_colors[index] = self.current_color_for_connection;
-                            }
-                            if *disconnect_mode {
-                                // disconnect
-                                CustomLogger::log("Should DISconnect");
-                                {
-                                    CustomLogger::log(&format!(
-                                        "DISCONNECTING port: {}P{}",
-                                        self.get_id(),
-                                        index
-                                    ));
-                                    self.vm.lock().unwrap().disconnect(index);
+
+                                if ui.button(t!("sva_shell.button.step")).clicked() {
+                                    self.step();
                                 }
-                                // change color to default
-                                self.port_colors[index] = Color32::GRAY;
+                                if ui.button(t!("sva_shell.button.reset")).clicked() {
+                                    self.vm.lock().unwrap().clear_registers();
+                                }
+                            });
+                        }
+
+                        //
+                        let id = ui.make_persistent_id("Vm code heder");
+                        egui::collapsing_header::CollapsingState::load_with_default_open(
+                            ui.ctx(),
+                            id,
+                            false,
+                        )
+                        .show_header(ui, |ui| {
+                            ui.heading(t!("sva_shell.code_block"));
+                        })
+                        .body(|ui| {
+                            egui::ScrollArea::vertical()
+                                .max_height(300.0)
+                                .show(ui, |ui| {
+                                    CodeEditor::default()
+                                        .id_source("code editor")
+                                        .with_rows(12)
+                                        .with_fontsize(14.0)
+                                        .with_theme(ColorTheme::GRUVBOX)
+                                        .with_syntax(Syntax::rust())
+                                        .with_numlines(true)
+                                        .show(ui, &mut self.code);
+                                });
+
+                            self.try_assemble_and_load();
+                        });
+                        //
+
+                        let labels = ["acc", "pc", "flag", "r:0-3", "p:0-3", "status", "delay"];
+
+                        ui.horizontal(|ui| {
+                            self.indicators[0].set(acc, "acc").show(ctx, ui);
+                            self.indicators[1]
+                                .set(pc.try_into().unwrap_or(0), "pc")
+                                .show(ctx, ui);
+
+                            // flag
+                            ui.label("flag");
+                            ui.button(flag.to_string());
+
+                            self.indicators[2].set(r[0], "r0").show(ctx, ui);
+                            self.indicators[2].set(r[1], "r1").show(ctx, ui);
+                            self.indicators[2].set(r[2], "r2").show(ctx, ui);
+                            self.indicators[2].set(r[3], "r3").show(ctx, ui);
+                        });
+
+                        ui.vertical(|ui| {
+                            ui.label("p 0-3");
+                            let ports;
+
+                            {
+                                ports = self.vm.lock().unwrap().get_ports();
                             }
-                        }
-                        if index < 4 {
-                            index += 1;
-                        }
-                    }
+                            let mut index = 0;
+                            for p in ports {
+                                let port_button =
+                                    Button::new(format!("{:?}", p)).stroke(Stroke::new(
+                                        4.0,
+                                        *self
+                                            .port_colors
+                                            .get(index)
+                                            .unwrap_or(&Color32::LIGHT_GRAY),
+                                    ));
+                                if ui.button(format!("{:?}", p)).clicked() {
+                                    if let Some(conn_index) =
+                                        ConnectionManager::get_current_id_index()
+                                    {
+                                        if let Some(conn) = ConnectionManager::get_connections()
+                                            .lock()
+                                            .unwrap()
+                                            .get_mut(conn_index)
+                                        {
+                                            let id = self.id.to_string() + "P" + &index.to_string();
+                                            self.vm
+                                                .lock()
+                                                .unwrap()
+                                                .connect_with_id(index, conn, id);
+                                        }
+                                    } else if ConnectionManager::in_disconnect_mode() {
+                                        self.vm.lock().unwrap().disconnect(index);
+                                    }
 
-                    //ui.button(format!("{:?}", self.vm.get_ports()));
-                });
+                                    // if let Some(conn) =
+                                    //     ConnectionManager::get_connection_to_current()
+                                    // {
+                                    //     let id = self.id.to_string() + "P" + &index.to_string();
+                                    //     self.vm.lock().unwrap().connect_with_id(index, conn, id);
+                                    // }
+                                }
 
-                //ui.label(self.vm.to_string());
+                                if index < 4 {
+                                    index += 1;
+                                }
+                            }
+
+                            //ui.button(format!("{:?}", self.vm.get_ports()));
+                        });
+
+                        //ui.label(self.vm.to_string());
+                    });
+                if self.delay_ms > 10 {
+                    ctx.request_repaint_after(Duration::from_millis(self.delay_ms));
+                } else {
+                    ctx.request_repaint_after(Duration::from_millis(10));
+                }
             });
-        if self.delay_ms > 10 {
-            ctx.request_repaint_after(Duration::from_millis(self.delay_ms));
-        } else {
-            ctx.request_repaint_after(Duration::from_millis(10));
-        }
     }
 
     /// Tries Assembles code to instructions and loads them to vm
