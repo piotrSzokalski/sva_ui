@@ -1,4 +1,5 @@
 use std::cell::{Ref, RefCell};
+use std::collections::HashMap;
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
@@ -9,7 +10,7 @@ use std::{fmt::Display, fs::File};
 use eframe::glow::NONE;
 use egui::epaint::tessellator::path;
 use egui::{containers::Window, Context};
-use egui::{Button, Color32, Label, ScrollArea, Stroke, Ui};
+use egui::{Button, Color32, CursorIcon, Label, ScrollArea, Stroke, Ui};
 use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 
 use egui_file::FileDialog;
@@ -26,16 +27,19 @@ use egui_notify::{Toast, Toasts};
 
 use simple_virtual_assembler::language::Language;
 
-use crate::custom_logger::CustomLogger;
-use crate::help_window::HelpWindow;
-use crate::sva_shell::SVAShell;
-
 use serde::{Deserialize, Serialize};
 
 use serde_json;
 
 use wasm_bindgen::prelude::*;
 use web_sys::{js_sys::Array, *};
+
+use crate::storage::connections::{self, ConnectionManager, CONNECTION_NAMES};
+use crate::storage::custom_logger::CustomLogger;
+
+use super::connection_widget::ConnectionWidget;
+use super::help_window::HelpWindow;
+use super::sva_window::SVAWindow;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -44,7 +48,7 @@ pub struct SvaUI {
     language: Language,
     //vm_shell: SVAShell,
     //#[serde(skip)]
-    vms: Vec<SVAShell>,
+    vms: Vec<SVAWindow>,
     connections: Rc<RefCell<Vec<Connection>>>,
     #[serde(skip)]
     connection_started: Rc<RefCell<bool>>,
@@ -70,6 +74,10 @@ pub struct SvaUI {
     save_file_dialog: Option<FileDialog>,
     #[serde(skip)]
     toasts: Toasts,
+
+    connections_copy: Vec<Connection>,
+
+    conn_names_copies: HashMap<usize, String>,
 }
 
 impl Default for SvaUI {
@@ -93,6 +101,8 @@ impl Default for SvaUI {
             open_file_dialog: None,
             save_file_dialog: None,
             toasts: Toasts::default(),
+            connections_copy: Default::default(),
+            conn_names_copies: HashMap::new(),
         }
     }
 }
@@ -108,6 +118,7 @@ impl SvaUI {
         rust_i18n::set_locale("en");
         if let Some(storage) = cc.storage {
             let mut sav_ui: SvaUI = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
+            sav_ui.set_connections_and_their_names();
             sav_ui.reconnect_ports();
             sav_ui.logger = CustomLogger::new();
             sav_ui.resned_refrences();
@@ -154,8 +165,25 @@ impl SvaUI {
         }
     }
 
+    fn copy_connections_and_their_names(&mut self) {
+        self.connections_copy = ConnectionManager::get_connections().lock().unwrap().clone();
+        CustomLogger::log("Copying connections");
+        CustomLogger::log(&format!("{:?}", self.connections_copy));
+        CustomLogger::log("________________________________________");
+        self.conn_names_copies = ConnectionManager::get_names();
+    }
+
+    fn set_connections_and_their_names(&mut self) {
+        ConnectionManager::set_connection(self.connections_copy.clone());
+        self.connections_copy.clear();
+        ConnectionManager::set_names(self.conn_names_copies.clone());
+        self.conn_names_copies.clear();
+    }
+
     fn reconnect_ports(&mut self) {
-        let mut connections = self.connections.borrow_mut();
+        //let mut connections = self.connections.borrow_mut();
+        let binding = ConnectionManager::get_connections();
+        let mut connections = binding.lock().unwrap();
         for conn in connections.iter_mut() {
             let id_pairs = conn.get_connected_vms_and_ports('P');
             for (vm_id, port_index) in id_pairs {
@@ -180,10 +208,11 @@ impl SvaUI {
     }
     // RENDMEVER TO DIS CONNECT and RECONTECT
     fn export_to_file(&mut self, path: String) {
+        self.copy_connections_and_their_names();
         self.disconnect_ports();
 
         let serialized_state = serde_json::to_string(&self);
-
+        self.set_connections_and_their_names();
         self.reconnect_ports();
         self.resned_refrences();
 
@@ -197,8 +226,8 @@ impl SvaUI {
             }
             Err(err) => {
                 self.toasts
-                .info(t!("error.export.cant_serialize"))
-                .set_duration(Some(Duration::from_secs(10)));
+                    .info(t!("error.export.cant_serialize"))
+                    .set_duration(Some(Duration::from_secs(10)));
             }
         };
     }
@@ -211,6 +240,7 @@ impl SvaUI {
                 match json {
                     Ok(sva_ui) => {
                         *self = sva_ui;
+                        self.set_connections_and_their_names();
                         self.reconnect_ports();
                         self.resned_refrences();
                     }
@@ -225,8 +255,8 @@ impl SvaUI {
             Err(err) => {
                 CustomLogger::log(&format!("Could not open file \n {}", err));
                 self.toasts
-                            .info(t!("error.file.cant_open"))
-                            .set_duration(Some(Duration::from_secs(10)));
+                    .info(t!("error.file.cant_open"))
+                    .set_duration(Some(Duration::from_secs(10)));
             }
         }
     }
@@ -236,7 +266,13 @@ impl SvaUI {
         egui::Window::new(t!("window.debug"))
             .open(&mut self.debug_mode)
             .show(ctx, |ui| {
-                ui.collapsing("variables", |ui| {});
+                ui.collapsing("variables", |ui| {
+                    ui.label("Connection state");
+                    ui.separator();
+                    ui.label(format!("{:?}", CONNECTION_NAMES));
+                    ui.separator();
+                    ui.label(format!("{:?}", ConnectionManager::get_current_id_index()));
+                });
                 ui.collapsing("logs", |ui| {
                     ScrollArea::vertical().max_height(600.0).show(ui, |ui| {
                         let logs = CustomLogger::get_logs_c();
@@ -256,6 +292,7 @@ impl SvaUI {
 impl eframe::App for SvaUI {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        self.copy_connections_and_their_names();
         self.disconnect_ports();
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
@@ -317,7 +354,7 @@ impl eframe::App for SvaUI {
                         });
                     ui.separator();
                     ui.add(
-                        egui::Slider::new(&mut self.ui_size, 0.75..=3.0)
+                        egui::Slider::new(&mut self.ui_size, 0.75..=2.25)
                             .step_by(0.25)
                             .text("ui scale"),
                     );
@@ -325,13 +362,14 @@ impl eframe::App for SvaUI {
                     if ui.button(t!("button.clear")).clicked() {
                         self.vms.clear();
                         self.connections = Rc::new(RefCell::new(Vec::new()));
+                        ConnectionManager::clear_connections();
                     }
                     ui.separator();
 
                     ui.menu_button(t!("button.add"), |ui| {
                         if ui.button("vm").clicked() {
                             let id = self.vms.last().map_or(0, |last| last.get_id() + 1);
-                            let mut x = SVAShell::new(
+                            let mut x = SVAWindow::new(
                                 id,
                                 "Vm".to_string(),
                                 self.connection_started.clone(),
@@ -346,61 +384,12 @@ impl eframe::App for SvaUI {
                         }
                     });
 
-                    let mut connection_button_text = "connect";
-                    let mut disconnect_button_text = "diconnect";
-                    let mut change_current_connection_color = false;
-
-                    if *self.connection_started.borrow_mut() {
+                    ctx.set_cursor_icon(egui::CursorIcon::Default);
+                    // cursor
+                    if ConnectionManager::get_current_id_index().is_some() {
                         ctx.set_cursor_icon(egui::CursorIcon::Cell);
-                        connection_button_text = "Stop connecting";
-                        disconnect_button_text = "disconnect";
-                    } else if *self.disconnect_mode.borrow_mut() {
+                    } else if ConnectionManager::in_disconnect_mode() {
                         ctx.set_cursor_icon(egui::CursorIcon::NotAllowed);
-                        disconnect_button_text = "stop disconnecting";
-                        connection_button_text = "connect";
-                    } else {
-                        ctx.set_cursor_icon(egui::CursorIcon::Default);
-                        connection_button_text = "connect";
-                        disconnect_button_text = "disconnect";
-                    }
-
-                    let start_connection_button =
-                        Button::new(connection_button_text).stroke(Stroke::new(
-                            4.0,
-                            self.port_connections_color_palle
-                                [self.current_port_connection_color_index],
-                        ));
-
-                    if !*self.disconnect_mode.borrow_mut() {
-                        if ui.add_enabled(true, start_connection_button).clicked() {
-                            let mut conn_started = self.connection_started.borrow_mut();
-                            *conn_started = !*conn_started;
-
-                            *self.disconnect_mode.borrow_mut() = false;
-
-                            if *conn_started {
-                                let mut conn = Connection::new();
-                                self.connections.borrow_mut().push(conn);
-                            } else {
-                                change_current_connection_color = true;
-                            }
-                        }
-                    }
-                    if change_current_connection_color {
-                        self.switch_port_connection_color();
-                    }
-
-                    // let ttt = Button::new(change_current_connection_color.to_string()).fill(
-                    //     self.port_connections_color_palle[self.current_port_connection_color_index],
-                    // );
-
-                    //ui.add(ttt);
-
-                    if !*self.connection_started.borrow_mut() {
-                        if ui.button(disconnect_button_text).clicked() {
-                            let mut dissconnec_mode = self.disconnect_mode.borrow_mut();
-                            *dissconnec_mode = !*dissconnec_mode;
-                        }
                     }
 
                     if ui.button(t!("label.help")).clicked() {
@@ -428,8 +417,25 @@ impl eframe::App for SvaUI {
             // The central panel the region left after adding TopPanel's and SidePanel's
 
             ui.collapsing("connections", |ui| {
-                let c = self.connections.clone();
-                ui.label(format!("{:?}", c));
+                ui.horizontal(|ui| {
+                    if ui.button("add").clicked() {
+                        ConnectionManager::create_connection();
+                    }
+                    if ui.button("disconnect").clicked() {
+                        ConnectionManager::toggle_disconnect_mode();
+                    }
+                });
+
+                egui::ScrollArea::vertical()
+                    .max_height(200.0)
+                    .show(ui, |ui| {
+                        ui.separator();
+
+                        let conns = ConnectionManager::get_connections().lock().unwrap().clone();
+                        for mut c in conns {
+                            ConnectionWidget::new(c).show(ctx, ui);
+                        }
+                    });
             });
             ui.separator();
 

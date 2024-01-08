@@ -9,7 +9,7 @@ rust-version = "1.72"
 
 # Virtual machine
 
-simple_virtual_assembler = { git = "https://github.com/piotrSzokalski/simple_virtual_assembler.git", branch = "master" }
+simple_virtual_assembler = { git = "https://github.com/piotrSzokalski/simple_virtual_assembler.git", branch = "ram" }
 
 # UI liblary
 
@@ -36,6 +36,7 @@ backtrace = "0.3.69"
 egui_file = "0.13.0"
 egui-notify = "0.11.0"
 rust-i18n = "2"
+once_cell = "1.19.0"
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
