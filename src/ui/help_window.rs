@@ -49,17 +49,17 @@ impl HelpWindow {
         DIV         DIVS    first operand value to acc
         MOD         MODS    first operand value to acc
 
-        AND
-        OR
-        XOR
-        NOT
+        AND         Performs bitwise and on acc and operand
+        OR          Performs bitwise or on acc and operand
+        XOR         Performs bitwise xor on acc and operand
+        NOT         Performs bitwise not on
 
         CMP r/v r/v Compares operands stores result in flag
-        JE  l       
-        JL  l
-        JG  l
+        JE  l       Jumps to label if flag is set to equal       
+        JL  l       Jumps to label if flag is set to lesser
+        JG  l       Jumps to label if flag is set to greater
 
-        HLT
+        HLT         Ends execution of program
 
         "#;
 

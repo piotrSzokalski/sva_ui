@@ -39,6 +39,7 @@ use crate::storage::custom_logger::CustomLogger;
 
 use super::connection_widget::ConnectionWidget;
 use super::help_window::HelpWindow;
+use super::ram_window::RamWidow;
 use super::sva_window::SVAWindow;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -78,6 +79,9 @@ pub struct SvaUI {
     connections_copy: Vec<Connection>,
 
     conn_names_copies: HashMap<usize, String>,
+
+    
+    rams: Vec<RamWidow>,
 }
 
 impl Default for SvaUI {
@@ -103,6 +107,8 @@ impl Default for SvaUI {
             toasts: Toasts::default(),
             connections_copy: Default::default(),
             conn_names_copies: HashMap::new(),
+            rams: Vec::new(),
+            
         }
     }
 }
@@ -310,6 +316,9 @@ impl eframe::App for SvaUI {
         // Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
         // For inspiration and more examples, go to https://emilk.github.io/egui
 
+        //refreasing ram
+        self.rams.iter_mut().for_each(|ram| ram.refresh());
+
         ctx.set_pixels_per_point(self.ui_size);
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -361,6 +370,7 @@ impl eframe::App for SvaUI {
                     ui.separator();
                     if ui.button(t!("button.clear")).clicked() {
                         self.vms.clear();
+                        self.rams.clear();
                         self.connections = Rc::new(RefCell::new(Vec::new()));
                         ConnectionManager::clear_connections();
                     }
@@ -381,6 +391,10 @@ impl eframe::App for SvaUI {
                                     .unwrap_or(&Color32::BLUE),
                             );
                             self.vms.push(x);
+                        }
+                        if ui.button("ram").clicked() {
+                            let id = self.rams.last().map_or(0, |last| last.get_id() + 1);
+                            self.rams.push(RamWidow::new(id));
                         }
                     });
 
@@ -439,12 +453,18 @@ impl eframe::App for SvaUI {
             });
             ui.separator();
 
+            // vms
             for index in 0..self.vms.len() {
                 let vm = &mut self.vms[index];
                 vm.set_port_connection_color(
                     self.port_connections_color_palle[self.current_port_connection_color_index],
                 );
                 vm.show(ctx, ui);
+            }
+            // rams
+            for index in 0..self.rams.len() {
+                let ram = &mut self.rams[index];
+                ram.show(ctx, ui);
             }
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
