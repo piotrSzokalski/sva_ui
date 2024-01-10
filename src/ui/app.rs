@@ -80,7 +80,6 @@ pub struct SvaUI {
 
     conn_names_copies: HashMap<usize, String>,
 
-    
     rams: Vec<RamWidow>,
 }
 
@@ -108,7 +107,6 @@ impl Default for SvaUI {
             connections_copy: Default::default(),
             conn_names_copies: HashMap::new(),
             rams: Vec::new(),
-            
         }
     }
 }
@@ -377,6 +375,7 @@ impl eframe::App for SvaUI {
                     ui.separator();
 
                     ui.menu_button(t!("button.add"), |ui| {
+                        // vm
                         if ui.button("vm").clicked() {
                             let id = self.vms.last().map_or(0, |last| last.get_id() + 1);
                             let mut x = SVAWindow::new(
@@ -389,9 +388,28 @@ impl eframe::App for SvaUI {
                                     .port_connections_color_palle
                                     .get(self.current_port_connection_color_index)
                                     .unwrap_or(&Color32::BLUE),
+                                false,
                             );
                             self.vms.push(x);
                         }
+                        // vm with stack
+                        if ui.button("vm with stack").clicked() {
+                            let id = self.vms.last().map_or(0, |last| last.get_id() + 1);
+                            let mut x = SVAWindow::new(
+                                id,
+                                "Vm".to_string(),
+                                self.connection_started.clone(),
+                                self.connections.clone(),
+                                self.disconnect_mode.clone(),
+                                *self
+                                    .port_connections_color_palle
+                                    .get(self.current_port_connection_color_index)
+                                    .unwrap_or(&Color32::BLUE),
+                                true,
+                            );
+                            self.vms.push(x);
+                        }
+                        // ram module
                         if ui.button("ram").clicked() {
                             let id = self.rams.last().map_or(0, |last| last.get_id() + 1);
                             self.rams.push(RamWidow::new(id));

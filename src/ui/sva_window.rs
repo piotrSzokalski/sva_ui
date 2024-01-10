@@ -5,6 +5,7 @@ use egui::Stroke;
 use simple_virtual_assembler::vm::flag::Flag;
 use std::cell::Ref;
 use std::cell::RefCell;
+use std::collections::btree_map::Range;
 use std::default;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -84,10 +85,21 @@ pub struct SVAWindow {
     indicators: [IndicatorWidget; 13],
 
     conn_ids: [Option<usize>; 4],
+
+    stack_present: bool,
+
+    stack_data: Vec<i32>,
+    #[serde(skip)]
+    stack_indicators: Vec<IndicatorWidget>,
 }
 
 impl Default for SVAWindow {
     fn default() -> Self {
+        let stack_indicators = (0..32)
+            .collect::<Vec<i32>>()
+            .iter()
+            .map(|index| IndicatorWidget::new("".to_owned()))
+            .collect();
         Self {
             id: -1,
             title: "BRAK".to_owned(),
@@ -124,6 +136,9 @@ impl Default for SVAWindow {
                 IndicatorWidget::new("delay".to_owned()),
             ],
             conn_ids: [None; 4],
+            stack_present: false,
+            stack_data: Vec::new(),
+            stack_indicators,
         }
     }
 }
@@ -136,7 +151,13 @@ impl SVAWindow {
         connections: Rc<RefCell<Vec<Connection>>>,
         disconnect_mode: Rc<RefCell<bool>>,
         current_color_for_connection: Color32,
+        stack_present: bool,
     ) -> SVAWindow {
+        let stack_indicators = (0..32)
+            .collect::<Vec<i32>>()
+            .iter()
+            .map(|index| IndicatorWidget::new("".to_owned()))
+            .collect();
         let mut s = SVAWindow {
             id,
             title,
@@ -159,7 +180,14 @@ impl SVAWindow {
             vm_state_previous: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
             indicators: Default::default(),
             conn_ids: [None; 4],
+            stack_present,
+            stack_data: Vec::new(),
+            stack_indicators: stack_indicators,
         };
+        if stack_present {
+            s.assembler = Assembler::new().with_stack();
+            s.vm = Arc::new(Mutex::new(VirtualMachine::new().with_stack(32)))
+        }
         s.vm.lock().unwrap().set_delay(1000);
         s
     }
@@ -189,13 +217,46 @@ impl SVAWindow {
         self.assembler.set_language(language);
     }
 
+    pub fn show_stack(&mut self, ctx: &Context, ui: &mut Ui) {
+        if !self.stack_present {
+            return;
+        }
+        ui.collapsing("stac", |ui| {
+            egui::ScrollArea::horizontal()
+                .max_width(200.0)
+                .enable_scrolling(true)
+                .show(ui, |ui| {
+                    ui.separator();
+                    ui.horizontal(|ui| {
+                        let mut indicator_index = 0;
+                        for (index, item) in self.stack_data.iter().enumerate().rev() {
+                            //ui.label(format!("{}", item));
+
+                            //let indicator_data = 0;
+                            ui.button(&item.to_string());
+                            //println!("{}", index);
+                            //self.stack_indicators[indicator_index].set(*item, "").show(ctx, ui);
+                            indicator_index += 1;
+                        }
+                    });
+                    ui.add_space(10.0);
+                });
+                
+        });
+    }
+
     // runs each frame
     pub fn show(&mut self, ctx: &Context, ui: &mut Ui) {
         {
             self.vm_state_previous = self.vm_state;
 
             match self.vm.lock() {
-                Ok(vm) => self.vm_state = vm.get_state_for_display(),
+                Ok(vm) => {
+                    self.vm_state = vm.get_state_for_display();
+                    if self.stack_present {
+                        self.stack_data = vm.get_stack();
+                    }
+                }
                 Err(err) => CustomLogger::log(&format!("{:?}", err)),
             }
         }
@@ -377,6 +438,8 @@ impl SVAWindow {
                             }
                         });
                     });
+                self.show_stack(ctx, ui);
+
                 if self.delay_ms > 10 {
                     ctx.request_repaint_after(Duration::from_millis(self.delay_ms));
                 } else {

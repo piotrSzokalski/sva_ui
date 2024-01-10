@@ -2,7 +2,7 @@ use egui::{Context, Ui, Widget};
 
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 enum ValueFormat {
     Dec,
     Bin,
@@ -16,7 +16,7 @@ impl Default for ValueFormat {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct IndicatorWidget {
     data: i32,
     format: ValueFormat,
