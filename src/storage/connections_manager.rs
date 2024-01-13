@@ -21,6 +21,8 @@ pub static CONNECTION_NAMES: Lazy<Mutex<HashMap<usize, String>>> =
 
 pub static DISCONNECT_MODE: Lazy<Arc<Mutex<bool>>> = Lazy::new(|| Arc::new(Mutex::new(false)));
 
+pub static NEW_CONNECTION_NAME_BUFFER: Lazy<String> =Lazy::new(||  (String::from("")));
+
 pub struct ConnectionManager {}
 
 impl ConnectionManager {

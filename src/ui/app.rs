@@ -83,6 +83,8 @@ pub struct SvaUI {
     rams: Vec<RamWidow>,
 
     connections_panel_visible: bool,
+
+    new_connection_name_buffer: String
 }
 
 impl Default for SvaUI {
@@ -110,6 +112,7 @@ impl Default for SvaUI {
             conn_names_copies: HashMap::new(),
             rams: Vec::new(),
             connections_panel_visible: false,
+            new_connection_name_buffer: String::new(),
         }
     }
 }
@@ -430,7 +433,7 @@ impl eframe::App for SvaUI {
                         self.debug_mode = !self.debug_mode;
                     }
                     if ui.button("connections").clicked() {
-                        self.connections_panel_visible = ! self.connections_panel_visible;
+                        self.connections_panel_visible = !self.connections_panel_visible;
                     }
                 });
             });
@@ -438,31 +441,31 @@ impl eframe::App for SvaUI {
 
         if self.connections_panel_visible {
             egui::SidePanel::right("my_left_panel")
-            .resizable(true)
-            .show(ctx, |ui| {
-                // ui.collapsing("connections", |ui| {
-                ui.vertical(|ui| {
-                    if ui.button("add").clicked() {
-                        ConnectionManager::create_connection();
-                    }
-                    if ui.button("disconnect").clicked() {
-                        ConnectionManager::toggle_disconnect_mode();
-                    }
-                });
-                ui.separator();
-
-                egui::ScrollArea::vertical().show(ui, |ui| {
+                .resizable(true)
+                .show(ctx, |ui| {
+                    // ui.collapsing("connections", |ui| {
+                    ui.heading("Connections");
+                    ui.vertical(|ui| {
+                        if ui.button("add").clicked() {
+                            ConnectionManager::create_connection();
+                        }
+                        if ui.button("disconnect").clicked() {
+                            ConnectionManager::toggle_disconnect_mode();
+                        }
+                    });
                     ui.separator();
 
-                    let conns = ConnectionManager::get_connections().lock().unwrap().clone();
-                    for mut c in conns {
-                        ConnectionWidget::new(c).show(ctx, ui);
-                    }
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        ui.separator();
+
+                        let conns = ConnectionManager::get_connections().lock().unwrap().clone();
+                        for mut c in conns {
+                            ConnectionWidget::new(c, &mut self.new_connection_name_buffer).show(ctx, ui);
+                        }
+                    });
+                    // });
                 });
-                // });
-            });
         }
-       
 
         // Central panel
 
