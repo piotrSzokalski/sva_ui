@@ -83,6 +83,8 @@ pub struct SVAWindow {
     stack_data: Vec<i32>,
     #[serde(skip)]
     stack_indicators: Vec<IndicatorWidget>,
+
+    max_hight: f32,
 }
 
 impl Default for SVAWindow {
@@ -129,12 +131,13 @@ impl Default for SVAWindow {
             stack_present: false,
             stack_data: Vec::new(),
             stack_indicators,
+            max_hight: 1000.0,
         }
     }
 }
 
 impl SVAWindow {
-    pub fn new(id: i32, title: String, stack_present: bool) -> SVAWindow {
+    pub fn new(id: i32, title: String, stack_present: bool, max_hight: f32) -> SVAWindow {
         let stack_indicators = (0..32)
             .collect::<Vec<i32>>()
             .iter()
@@ -163,6 +166,7 @@ impl SVAWindow {
             stack_present,
             stack_data: Vec::new(),
             stack_indicators: stack_indicators,
+            max_hight,
         };
         if stack_present {
             s.assembler = Assembler::new().with_stack();
@@ -179,6 +183,10 @@ impl SVAWindow {
         self.id
     }
 
+    pub fn set_max_height(&mut self, height: f32) {
+        self.max_hight = height;
+    }
+
     pub fn set_language(&mut self, language: Language) {
         self.assembler.set_language(language);
     }
@@ -190,6 +198,7 @@ impl SVAWindow {
         ui.collapsing("stac", |ui| {
             egui::ScrollArea::horizontal()
                 .max_width(200.0)
+                .max_height(self.max_hight * 0.75)
                 .enable_scrolling(true)
                 .show(ui, |ui| {
                     ui.separator();
@@ -211,57 +220,6 @@ impl SVAWindow {
     }
 
     // runs each frame
-    pub fn show(&mut self, ctx: &Context, ui: &mut Ui) {
-        {
-            self.vm_state_previous = self.vm_state;
-
-            match self.vm.lock() {
-                Ok(vm) => {
-                    self.vm_state = vm.get_state_for_display();
-                    if self.stack_present {
-                        self.stack_data = vm.get_stack();
-                    }
-                }
-                Err(err) => CustomLogger::log(&format!("{:?}", err)),
-            }
-        }
-        let (acc, pc, flag, r, p, vm_status, delay) = self.vm_state;
-
-        egui::Window::new(&self.id.to_string())
-            .open(&mut true)
-            .show(ctx, |ui| {
-                egui::ScrollArea::vertical()
-                    .max_height(600.0)
-                    .show(ui, |ui| {
-                        // setting vm delay
-                        if ui
-                            .add(egui::Slider::new(&mut self.delay_ms, 0..=5000).text("delay"))
-                            .changed()
-                        {
-                            self.vm
-                                .lock()
-                                .unwrap()
-                                .set_delay(self.delay_ms.try_into().unwrap());
-                        }
-
-                        self.show_vm_controll_buttons(ui, vm_status);
-
-                        self.show_code_editor(ui);
-
-                        self.show_registers(ui, acc, ctx, pc, flag, r);
-
-                        self.show_ports(ui);
-
-                        self.show_stack(ctx, ui);
-                    });
-
-                if self.delay_ms > 10 {
-                    ctx.request_repaint_after(Duration::from_millis(self.delay_ms));
-                } else {
-                    ctx.request_repaint_after(Duration::from_millis(10));
-                }
-            });
-    }
 
     fn show_ports(&mut self, ui: &mut Ui) {
         ui.vertical(|ui| {
@@ -335,7 +293,6 @@ impl SVAWindow {
             })
             .body(|ui| {
                 egui::ScrollArea::vertical()
-                    .max_height(300.0)
                     .max_width(400.0)
                     .show(ui, |ui| {
                         CodeEditor::default()
@@ -470,5 +427,58 @@ impl SVAWindow {
                 self.vm.lock().unwrap().execute();
             }
         }
+    }
+
+    pub fn show(&mut self, ctx: &Context, ui: &mut Ui) {
+        {
+            self.vm_state_previous = self.vm_state;
+
+            match self.vm.lock() {
+                Ok(vm) => {
+                    self.vm_state = vm.get_state_for_display();
+                    if self.stack_present {
+                        self.stack_data = vm.get_stack();
+                    }
+                }
+                Err(err) => CustomLogger::log(&format!("{:?}", err)),
+            }
+        }
+        let (acc, pc, flag, r, p, vm_status, delay) = self.vm_state;
+
+        egui::Window::new(&self.id.to_string())
+            .open(&mut true)
+            .show(ctx, |ui| {
+                egui::ScrollArea::vertical()
+                    .max_height(self.max_hight)
+                    .show(ui, |ui| {
+                        ui.label(format!("{}", self.max_hight));
+                        // setting vm delay
+                        if ui
+                            .add(egui::Slider::new(&mut self.delay_ms, 0..=5000).text("delay"))
+                            .changed()
+                        {
+                            self.vm
+                                .lock()
+                                .unwrap()
+                                .set_delay(self.delay_ms.try_into().unwrap());
+                        }
+
+                        self.show_vm_controll_buttons(ui, vm_status);
+
+                        self.show_code_editor(ui);
+
+                        self.show_registers(ui, acc, ctx, pc, flag, r);
+
+                        self.show_ports(ui);
+
+                        self.show_stack(ctx, ui);
+                    });
+
+                if self.delay_ms > 10 {
+                    ctx.request_repaint_after(Duration::from_millis(self.delay_ms));
+                } else {
+                    ctx.request_repaint_after(Duration::from_millis(10));
+                }
+            });
     }
 }

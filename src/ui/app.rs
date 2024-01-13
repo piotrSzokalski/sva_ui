@@ -54,7 +54,7 @@ pub struct SvaUI {
 
     vms: Vec<SVAWindow>,
 
-    ui_size: f32,
+    ui_scale: f32,
     help_widow: HelpWindow,
 
     /// Custom logger
@@ -95,7 +95,7 @@ impl Default for SvaUI {
             language: Language::En,
             vms: Vec::new(),
 
-            ui_size: 1.25,
+            ui_scale: 1.25,
             help_widow: HelpWindow { is_open: false },
 
             logger: CustomLogger::new(),
@@ -374,17 +374,18 @@ impl SvaUI {
     }
 
     fn show_component_add_menu(&mut self, ui: &mut Ui) {
+        let max_height = 400.0 * (2.25 / self.ui_scale);
         ui.menu_button(t!("button.add"), |ui| {
             // vm
             if ui.button("vm").clicked() {
                 let id = self.vms.last().map_or(0, |last| last.get_id() + 1);
-                let mut x = SVAWindow::new(id, "Vm".to_string(), false);
+                let mut x = SVAWindow::new(id, "Vm".to_string(), false, max_height);
                 self.vms.push(x);
             }
             // vm with stack
             if ui.button("vm with stack").clicked() {
                 let id = self.vms.last().map_or(0, |last| last.get_id() + 1);
-                let mut x = SVAWindow::new(id, "Vm".to_string(), true);
+                let mut x = SVAWindow::new(id, "Vm".to_string(), true, max_height);
                 self.vms.push(x);
             }
             // ram module
@@ -449,7 +450,7 @@ impl eframe::App for SvaUI {
         //refreasing ram
         self.rams.iter_mut().for_each(|ram| ram.refresh());
 
-        ctx.set_pixels_per_point(self.ui_size);
+        ctx.set_pixels_per_point(self.ui_scale);
 
         // setting cursor icon
         if ConnectionManager::get_current_id_index().is_some() {
@@ -474,11 +475,19 @@ impl eframe::App for SvaUI {
                     self.show_language_select(ui);
                     ui.separator();
                     // ui scale slider
-                    ui.add(
-                        egui::Slider::new(&mut self.ui_size, 0.75..=2.25)
-                            .step_by(0.25)
-                            .text("ui scale"),
-                    );
+                    if ui
+                        .add(
+                            egui::Slider::new(&mut self.ui_scale, 0.75..=2.25)
+                                .step_by(0.25)
+                                .text("ui scale"),
+                        )
+                        .changed()
+                    {
+                        let max_height = 400.0 * (2.25 / self.ui_scale);
+                        for vm in self.vms.iter_mut() {
+                            vm.set_max_height(max_height);
+                        }
+                    }
                     ui.separator();
                     // clear button
                     if ui.button(t!("button.clear")).clicked() {
