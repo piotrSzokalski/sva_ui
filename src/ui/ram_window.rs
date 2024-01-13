@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 use egui::{Context, Ui};
 use serde::{Deserialize, Serialize};
 use simple_virtual_assembler::components::ram::Ram;
@@ -36,7 +38,7 @@ impl RamWidow {
     }
 
     pub fn show(&mut self, ctx: &Context, ui: &mut Ui) {
-        egui::Window::new(t!("widow.help"))
+        egui::Window::new(format!("ram {}", self.id))
             .open(&mut true)
             .show(ctx, |ui| {
                 let values = self.ram.get_data_ref().clone();

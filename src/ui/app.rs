@@ -35,7 +35,9 @@ use serde_json;
 use wasm_bindgen::prelude::*;
 use web_sys::{js_sys::Array, *};
 
-use crate::storage::connections_manager::{self, ConnectionManager, CONNECTION_NAMES, CURRENT_CONN_ID_FOR_RENAME};
+use crate::storage::connections_manager::{
+    self, ConnectionManager, CONNECTION_NAMES, CURRENT_CONN_ID_FOR_RENAME,
+};
 use crate::storage::custom_logger::CustomLogger;
 
 use super::connection_widget::ConnectionWidget;
@@ -48,19 +50,12 @@ use super::sva_window::SVAWindow;
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct SvaUI {
     language: Language,
-    //vm_shell: SVAShell,
-    //#[serde(skip)]
+
     vms: Vec<SVAWindow>,
-    connections: Rc<RefCell<Vec<Connection>>>,
-    #[serde(skip)]
-    connection_started: Rc<RefCell<bool>>,
-    #[serde(skip)]
-    disconnect_mode: Rc<RefCell<bool>>,
+
     ui_size: f32,
     help_widow: HelpWindow,
-    #[serde(skip)]
-    port_connections_color_palle: [Color32; 7],
-    current_port_connection_color_index: usize,
+
     /// Custom logger
     #[serde(skip)]
     logger: CustomLogger,
@@ -98,13 +93,10 @@ impl Default for SvaUI {
             // vm_shell: SVAShell::new(0, "First VM window".to_string()),
             language: Language::En,
             vms: Vec::new(),
-            connections: Rc::new(RefCell::new(Vec::new())),
-            connection_started: Rc::new(RefCell::new(false)),
+
             ui_size: 1.25,
             help_widow: HelpWindow { is_open: false },
-            disconnect_mode: Rc::new(RefCell::new(false)),
-            port_connections_color_palle: initialize_colors(),
-            current_port_connection_color_index: 0,
+
             logger: CustomLogger::new(),
             debug_mode: false,
             opened_file: None,
@@ -135,7 +127,7 @@ impl SvaUI {
             sav_ui.set_connections_and_their_names();
             sav_ui.reconnect_ports();
             sav_ui.logger = CustomLogger::new();
-            sav_ui.resned_refrences();
+
             return sav_ui;
         }
         let mut sva_ui: SvaUI = Default::default();
@@ -162,13 +154,6 @@ impl SvaUI {
         }
     }
 
-    fn switch_port_connection_color(&mut self) {
-        if self.current_port_connection_color_index < 6 {
-            self.current_port_connection_color_index += 1;
-        } else {
-            self.current_port_connection_color_index = 0;
-        }
-    }
     fn disconnect_ports(&mut self) {
         for vm in self.vms.iter_mut() {
             for i in 0..4 {
@@ -211,15 +196,7 @@ impl SvaUI {
             for vm in self.vms.iter_mut() {}
         }
     }
-    fn resned_refrences(&mut self) {
-        for vm in self.vms.iter_mut() {
-            vm.set_refs(
-                self.connection_started.clone(),
-                self.connections.clone(),
-                self.disconnect_mode.clone(),
-            );
-        }
-    }
+
     // RENDMEVER TO DIS CONNECT and RECONTECT
     fn export_to_file(&mut self, path: String) {
         self.copy_connections_and_their_names();
@@ -228,7 +205,6 @@ impl SvaUI {
         let serialized_state = serde_json::to_string(&self);
         self.set_connections_and_their_names();
         self.reconnect_ports();
-        self.resned_refrences();
 
         match serialized_state {
             Ok(data) => {
@@ -256,7 +232,6 @@ impl SvaUI {
                         *self = sva_ui;
                         self.set_connections_and_their_names();
                         self.reconnect_ports();
-                        self.resned_refrences();
                     }
                     Err(err) => {
                         CustomLogger::log(&format!("{} \n {}", t!("error.import.bad_json"), err));
@@ -379,7 +354,7 @@ impl eframe::App for SvaUI {
                     if ui.button(t!("button.clear")).clicked() {
                         self.vms.clear();
                         self.rams.clear();
-                        self.connections = Rc::new(RefCell::new(Vec::new()));
+
                         ConnectionManager::clear_connections();
                     }
                     ui.separator();
@@ -388,35 +363,13 @@ impl eframe::App for SvaUI {
                         // vm
                         if ui.button("vm").clicked() {
                             let id = self.vms.last().map_or(0, |last| last.get_id() + 1);
-                            let mut x = SVAWindow::new(
-                                id,
-                                "Vm".to_string(),
-                                self.connection_started.clone(),
-                                self.connections.clone(),
-                                self.disconnect_mode.clone(),
-                                *self
-                                    .port_connections_color_palle
-                                    .get(self.current_port_connection_color_index)
-                                    .unwrap_or(&Color32::BLUE),
-                                false,
-                            );
+                            let mut x = SVAWindow::new(id, "Vm".to_string(), false);
                             self.vms.push(x);
                         }
                         // vm with stack
                         if ui.button("vm with stack").clicked() {
                             let id = self.vms.last().map_or(0, |last| last.get_id() + 1);
-                            let mut x = SVAWindow::new(
-                                id,
-                                "Vm".to_string(),
-                                self.connection_started.clone(),
-                                self.connections.clone(),
-                                self.disconnect_mode.clone(),
-                                *self
-                                    .port_connections_color_palle
-                                    .get(self.current_port_connection_color_index)
-                                    .unwrap_or(&Color32::BLUE),
-                                true,
-                            );
+                            let mut x = SVAWindow::new(id, "Vm".to_string(), true);
                             self.vms.push(x);
                         }
                         // ram module
@@ -486,9 +439,7 @@ impl eframe::App for SvaUI {
             // vms
             for index in 0..self.vms.len() {
                 let vm = &mut self.vms[index];
-                vm.set_port_connection_color(
-                    self.port_connections_color_palle[self.current_port_connection_color_index],
-                );
+
                 vm.show(ctx, ui);
             }
             // rams
@@ -573,7 +524,6 @@ impl eframe::App for SvaUI {
         // modal
 
         // cursor
-
     }
 }
 
@@ -589,37 +539,4 @@ fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
         );
         ui.label(".");
     });
-}
-/// TODO:
-/// choose an appriorpet colors
-fn initialize_colors() -> [Color32; 7] {
-    // [
-    //     Color32::RED,
-    //     Color32::BLUE,
-    //     Color32::GOLD,
-    //     Color32::GRAY,
-    //     Color32::KHAKI,
-    //     Color32::DEBUG_COLOR,
-    //     Color32::LIGHT_YELLOW,
-    // ]
-    //////////////
-    //  [
-    //     Color32::from_rgb(0, 128, 128),   // Teal
-    //     Color32::from_rgb(72, 209, 204),  // Medium Turquoise
-    //     Color32::from_rgb(0, 206, 209),   // Dark Turquoise
-    //     Color32::from_rgb(102, 205, 170), // Medium Aquamarine
-    //     Color32::from_rgb(32, 178, 170),  // Light Sea Green
-    //     Color32::from_rgb(95, 158, 160),  // Cadet Blue
-    //     Color32::from_rgb(64, 224, 208),  // Turquoise
-    // ]
-    ////////////////////
-    [
-        Color32::from_rgb(255, 87, 34),  // Red-Orange
-        Color32::from_rgb(63, 81, 181),  // Indigo
-        Color32::from_rgb(0, 150, 136),  // Teal
-        Color32::from_rgb(255, 193, 7),  // Amber
-        Color32::from_rgb(33, 150, 243), // Blue
-        Color32::from_rgb(103, 58, 183), // Deep Purple
-        Color32::from_rgb(76, 175, 80),  // Green
-    ]
 }

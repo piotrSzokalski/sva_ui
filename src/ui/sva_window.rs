@@ -58,23 +58,14 @@ pub struct SVAWindow {
 
     //  --------------------------------------RCs--------------------------------------
     /// Connecting in progress
-    #[serde(skip)]
-    connection_started: Rc<RefCell<bool>>,
 
     /// Connections
-    #[serde(skip)]
-    connections: Rc<RefCell<Vec<Connection>>>,
 
     /// Disconnect port on clikc
 
-    //skiping to prevents cloing when serzliaing/desrizlaing
-    #[serde(skip)]
-    disconnect_mode: Rc<RefCell<bool>>,
     //  -------------------------------------------------------------------------------
     ///Delay ms
     delay_ms: u64,
-
-    current_color_for_connection: Color32,
 
     port_colors: [Color32; 4],
 
@@ -112,11 +103,9 @@ impl Default for SVAWindow {
             parsing_error: None,
             language: Language::En,
             control_button_text: "Start".to_owned(),
-            connection_started: Rc::new(RefCell::new(false)),
-            connections: Rc::new(RefCell::new(Vec::new())),
+
             delay_ms: 1000,
-            disconnect_mode: Rc::new(RefCell::new(false)),
-            current_color_for_connection: Color32::GOLD,
+
             port_colors: [Color32::GRAY, Color32::GRAY, Color32::GRAY, Color32::GRAY],
             vm_state: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
             vm_state_previous: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
@@ -144,15 +133,7 @@ impl Default for SVAWindow {
 }
 
 impl SVAWindow {
-    pub fn new(
-        id: i32,
-        title: String,
-        connection_started: Rc<RefCell<bool>>,
-        connections: Rc<RefCell<Vec<Connection>>>,
-        disconnect_mode: Rc<RefCell<bool>>,
-        current_color_for_connection: Color32,
-        stack_present: bool,
-    ) -> SVAWindow {
+    pub fn new(id: i32, title: String, stack_present: bool) -> SVAWindow {
         let stack_indicators = (0..32)
             .collect::<Vec<i32>>()
             .iter()
@@ -170,11 +151,9 @@ impl SVAWindow {
             parsing_error: None,
             language: Language::En,
             control_button_text: "Start".to_owned(),
-            connection_started,
-            connections,
+
             delay_ms: 1000,
-            disconnect_mode,
-            current_color_for_connection,
+
             port_colors: [Color32::GRAY, Color32::GRAY, Color32::GRAY, Color32::GRAY],
             vm_state: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
             vm_state_previous: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
@@ -193,27 +172,13 @@ impl SVAWindow {
     }
 
     /// Sets filds that are Rc to new instances to presist state between seralzianon and deseralziaon
-    pub fn set_refs(
-        &mut self,
-        connection_started: Rc<RefCell<bool>>,
-        connections: Rc<RefCell<Vec<Connection>>>,
-        disconnect_mode: Rc<RefCell<bool>>,
-    ) {
-        self.connection_started = connection_started;
-        self.connections = connections;
-        self.disconnect_mode = disconnect_mode;
-    }
-
-    pub fn set_port_connection_color(&mut self, color: Color32) {
-        self.current_color_for_connection = color;
-    }
+    pub fn set_refs(&mut self) {}
 
     pub fn get_id(&self) -> i32 {
         self.id
     }
 
     pub fn set_language(&mut self, language: Language) {
-        //self.language = language;
         self.assembler.set_language(language);
     }
 
@@ -241,7 +206,6 @@ impl SVAWindow {
                     });
                     ui.add_space(10.0);
                 });
-                
         });
     }
 
