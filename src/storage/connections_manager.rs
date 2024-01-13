@@ -16,6 +16,8 @@ pub static NEXT_CONN_ID: Mutex<usize> = Mutex::new(1);
 
 static CURRENT_CONN_ID: Mutex<Option<usize>> = Mutex::new(None);
 
+pub static CURRENT_CONN_ID_FOR_RENAME: Mutex<Option<usize>> = Mutex::new(None);
+
 pub static CONNECTION_NAMES: Lazy<Mutex<HashMap<usize, String>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 

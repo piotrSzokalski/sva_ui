@@ -14,6 +14,7 @@ use egui::{Button, Color32, CursorIcon, Label, ScrollArea, Stroke, Ui};
 use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 
 use egui_file::FileDialog;
+use egui_modal::Modal;
 use env_logger::Logger;
 use simple_virtual_assembler::assembler::parsing_err::ParsingError;
 use simple_virtual_assembler::components::connection;
@@ -34,7 +35,7 @@ use serde_json;
 use wasm_bindgen::prelude::*;
 use web_sys::{js_sys::Array, *};
 
-use crate::storage::connections_manager::{self, ConnectionManager, CONNECTION_NAMES};
+use crate::storage::connections_manager::{self, ConnectionManager, CONNECTION_NAMES, CURRENT_CONN_ID_FOR_RENAME};
 use crate::storage::custom_logger::CustomLogger;
 
 use super::connection_widget::ConnectionWidget;
@@ -84,7 +85,9 @@ pub struct SvaUI {
 
     connections_panel_visible: bool,
 
-    new_connection_name_buffer: String
+    new_connection_name_buffer: String,
+
+    change_conn_name_modal_open: bool,
 }
 
 impl Default for SvaUI {
@@ -113,6 +116,7 @@ impl Default for SvaUI {
             rams: Vec::new(),
             connections_panel_visible: false,
             new_connection_name_buffer: String::new(),
+            change_conn_name_modal_open: false,
         }
     }
 }
@@ -460,7 +464,8 @@ impl eframe::App for SvaUI {
 
                         let conns = ConnectionManager::get_connections().lock().unwrap().clone();
                         for mut c in conns {
-                            ConnectionWidget::new(c, &mut self.new_connection_name_buffer).show(ctx, ui);
+                            ConnectionWidget::new(c, &mut self.change_conn_name_modal_open)
+                                .show(ctx, ui);
                         }
                     });
                     // });
@@ -470,6 +475,11 @@ impl eframe::App for SvaUI {
         // Central panel
 
         egui::CentralPanel::default().show(ctx, |ui| {
+            if ConnectionManager::get_current_id_index().is_some() {
+                ctx.set_cursor_icon(egui::CursorIcon::Cell);
+            } else if ConnectionManager::in_disconnect_mode() {
+                ctx.set_cursor_icon(egui::CursorIcon::NotAllowed);
+            }
             // The central panel the region left after adding TopPanel's and SidePanel's
             ui.separator();
 
@@ -536,12 +546,34 @@ impl eframe::App for SvaUI {
             // notifications
             self.toasts.show(ctx);
         }); // Central panel
-            // cursor
-        if ConnectionManager::get_current_id_index().is_some() {
-            ctx.set_cursor_icon(egui::CursorIcon::Cell);
-        } else if ConnectionManager::in_disconnect_mode() {
-            ctx.set_cursor_icon(egui::CursorIcon::NotAllowed);
+
+        // Modal for changing connection name
+        let change_conn_name_modal = Modal::new(ctx, "change_conn_name_modal");
+        change_conn_name_modal.show(|ui| {
+            change_conn_name_modal.title(ui, "change name");
+
+            ui.text_edit_singleline(&mut self.new_connection_name_buffer);
+            if ui.button("Save").clicked() {
+                let id = *CURRENT_CONN_ID_FOR_RENAME.lock().unwrap();
+                ConnectionManager::set_name(id, self.new_connection_name_buffer.clone());
+
+                self.change_conn_name_modal_open = false;
+                change_conn_name_modal.close();
+            }
+            if ui.button("Cancel").clicked() {
+                self.change_conn_name_modal_open = false;
+                change_conn_name_modal.close();
+            }
+        });
+
+        if self.change_conn_name_modal_open {
+            change_conn_name_modal.open();
         }
+
+        // modal
+
+        // cursor
+
     }
 }
 
