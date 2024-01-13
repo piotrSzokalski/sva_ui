@@ -44,8 +44,10 @@ impl ConnectionManager {
         CONNECTION_NAMES.lock().unwrap().clone()
     }
 
-    pub fn set_name(id: usize, new_name: String) {
-        *CONNECTION_NAMES.lock().unwrap().get_mut(&id).unwrap() = new_name;
+    pub fn set_name(id: Option<usize>, new_name: String) {
+        if let Some(id) = id {
+            *CONNECTION_NAMES.lock().unwrap().get_mut(&id).unwrap() = new_name;
+        }
     }
 
     pub fn set_names(names: HashMap<usize, String>) {
@@ -54,6 +56,18 @@ impl ConnectionManager {
 
     pub fn get_connections() -> Arc<Mutex<Vec<Connection>>> {
         CONNECTIONS.clone()
+    }
+
+    pub fn remove_connection(id: Option<usize>) {
+        if let Some(conn) = CONNECTIONS
+            .lock()
+            .unwrap()
+            .iter_mut()
+            .find(|c| c.get_id() != id)
+        {
+           // let ports =  conn.get_connected_vms_and_ports('P');
+            CONNECTIONS.lock().unwrap().retain(|c| c.get_id() != id);
+        }
     }
 
     pub fn set_connection(state: Vec<Connection>) {

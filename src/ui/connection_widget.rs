@@ -1,7 +1,7 @@
 use egui::{Context, Ui};
 use simple_virtual_assembler::components::connection::Connection;
 
-use crate::storage::{connections::{ConnectionManager, CONNECTIONS}, custom_logger::CustomLogger};
+use crate::storage::{connections_manager::{ConnectionManager, CONNECTIONS}, custom_logger::CustomLogger};
 
 pub struct ConnectionWidget {
     conn: Connection,
@@ -23,7 +23,7 @@ impl ConnectionWidget {
 
         ui.separator();
 
-        ui.horizontal(|ui| {
+        ui.vertical(|ui| {
             ui.horizontal(|ui| {
                 ui.label(format!("{:?}", id));
                 ui.separator();
@@ -42,8 +42,12 @@ impl ConnectionWidget {
                     ConnectionManager::set_current_id(id);
                 }
             }
-            if ui.button("rename").clicked() {} //TODO:
-            if ui.button("remove").clicked() {} //TODO:
+            if ui.button("rename").clicked() {
+                ConnectionManager::set_name(id, "temporary test".to_owned());
+            } //TODO:
+            if ui.button("remove").clicked() {
+                ConnectionManager::remove_connection(id);
+            } //TODO:
         });
         let collapsing_id = ui.make_persistent_id(self.conn.get_id());
         egui::collapsing_header::CollapsingState::load_with_default_open(

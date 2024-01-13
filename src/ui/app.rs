@@ -34,7 +34,7 @@ use serde_json;
 use wasm_bindgen::prelude::*;
 use web_sys::{js_sys::Array, *};
 
-use crate::storage::connections::{self, ConnectionManager, CONNECTION_NAMES};
+use crate::storage::connections_manager::{self, ConnectionManager, CONNECTION_NAMES};
 use crate::storage::custom_logger::CustomLogger;
 
 use super::connection_widget::ConnectionWidget;
@@ -81,6 +81,8 @@ pub struct SvaUI {
     conn_names_copies: HashMap<usize, String>,
 
     rams: Vec<RamWidow>,
+
+    connections_panel_visible: bool,
 }
 
 impl Default for SvaUI {
@@ -107,6 +109,7 @@ impl Default for SvaUI {
             connections_copy: Default::default(),
             conn_names_copies: HashMap::new(),
             rams: Vec::new(),
+            connections_panel_visible: false,
         }
     }
 }
@@ -412,17 +415,12 @@ impl eframe::App for SvaUI {
                         // ram module
                         if ui.button("ram").clicked() {
                             let id = self.rams.last().map_or(0, |last| last.get_id() + 1);
+
                             self.rams.push(RamWidow::new(id));
                         }
                     });
 
                     ctx.set_cursor_icon(egui::CursorIcon::Default);
-                    // cursor
-                    if ConnectionManager::get_current_id_index().is_some() {
-                        ctx.set_cursor_icon(egui::CursorIcon::Cell);
-                    } else if ConnectionManager::in_disconnect_mode() {
-                        ctx.set_cursor_icon(egui::CursorIcon::NotAllowed);
-                    }
 
                     if ui.button(t!("label.help")).clicked() {
                         self.help_widow.toggle_open_close();
@@ -431,25 +429,19 @@ impl eframe::App for SvaUI {
                     if ui.button("Debug").clicked() {
                         self.debug_mode = !self.debug_mode;
                     }
-
-                    self.help_widow.show(ctx, ui);
-
-                    // debug window
-                    self.show_debug_window(ctx, ui);
-
-                    // notifications
-                    self.toasts.show(ctx);
+                    if ui.button("connections").clicked() {
+                        self.connections_panel_visible = ! self.connections_panel_visible;
+                    }
                 });
             });
         });
 
-        // Central panel
-
-        egui::CentralPanel::default().show(ctx, |ui| {
-            // The central panel the region left after adding TopPanel's and SidePanel's
-
-            ui.collapsing("connections", |ui| {
-                ui.horizontal(|ui| {
+        if self.connections_panel_visible {
+            egui::SidePanel::right("my_left_panel")
+            .resizable(true)
+            .show(ctx, |ui| {
+                // ui.collapsing("connections", |ui| {
+                ui.vertical(|ui| {
                     if ui.button("add").clicked() {
                         ConnectionManager::create_connection();
                     }
@@ -457,18 +449,25 @@ impl eframe::App for SvaUI {
                         ConnectionManager::toggle_disconnect_mode();
                     }
                 });
+                ui.separator();
 
-                egui::ScrollArea::vertical()
-                    .max_height(200.0)
-                    .show(ui, |ui| {
-                        ui.separator();
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    ui.separator();
 
-                        let conns = ConnectionManager::get_connections().lock().unwrap().clone();
-                        for mut c in conns {
-                            ConnectionWidget::new(c).show(ctx, ui);
-                        }
-                    });
+                    let conns = ConnectionManager::get_connections().lock().unwrap().clone();
+                    for mut c in conns {
+                        ConnectionWidget::new(c).show(ctx, ui);
+                    }
+                });
+                // });
             });
+        }
+       
+
+        // Central panel
+
+        egui::CentralPanel::default().show(ctx, |ui| {
+            // The central panel the region left after adding TopPanel's and SidePanel's
             ui.separator();
 
             // vms
@@ -526,7 +525,20 @@ impl eframe::App for SvaUI {
                     }
                 }
             }
+            self.help_widow.show(ctx, ui);
+
+            // debug window
+            self.show_debug_window(ctx, ui);
+
+            // notifications
+            self.toasts.show(ctx);
         }); // Central panel
+            // cursor
+        if ConnectionManager::get_current_id_index().is_some() {
+            ctx.set_cursor_icon(egui::CursorIcon::Cell);
+        } else if ConnectionManager::in_disconnect_mode() {
+            ctx.set_cursor_icon(egui::CursorIcon::NotAllowed);
+        }
     }
 }
 

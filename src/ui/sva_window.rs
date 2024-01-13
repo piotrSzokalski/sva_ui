@@ -27,7 +27,7 @@ use simple_virtual_assembler::assembler::assembler::Assembler;
 
 use simple_virtual_assembler::language::Language;
 
-use crate::storage::connections::ConnectionManager;
+use crate::storage::connections_manager::ConnectionManager;
 use crate::storage::custom_logger::CustomLogger;
 
 use super::indicator_widget::IndicatorWidget;

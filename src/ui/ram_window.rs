@@ -2,9 +2,9 @@ use egui::{Context, Ui};
 use serde::{Deserialize, Serialize};
 use simple_virtual_assembler::components::ram::Ram;
 
-use crate::storage::{connections::ConnectionManager, custom_logger::CustomLogger};
+use crate::storage::{ custom_logger::CustomLogger, connections_manager::ConnectionManager};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct RamWidow {
     id: usize,
     /// Is widow open
@@ -14,11 +14,14 @@ pub struct RamWidow {
 
 impl RamWidow {
     pub fn new(id: usize) -> Self {
-        Self {
+        let x = Self {
             is_open: true,
-            ram: Ram::new().with_id(id).with_size(256),
+            ram: Ram::new().with_id(id).with_size(512),
             id,
-        }
+        };
+        CustomLogger::log("adding ram window");
+        CustomLogger::log(&format!("{:?}", x));
+        x
     }
     pub fn get_id(&self) -> usize {
         self.id
