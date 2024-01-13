@@ -29,6 +29,7 @@ use simple_virtual_assembler::language::Language;
 
 use crate::storage::connections_manager::ConnectionManager;
 use crate::storage::custom_logger::CustomLogger;
+use crate::storage::toasts::TOASTS;
 
 use super::indicator_widget::IndicatorWidget;
 
@@ -309,6 +310,18 @@ impl SVAWindow {
                                 }
                                 if ui.button(t!("sva_shell.button.reset")).clicked() {
                                     self.vm.lock().unwrap().clear_registers();
+                                    match self.vm.lock() {
+                                        Ok(mut vm) => {
+                                            vm.clear_registers();
+                                        }
+                                        Err(err) => {
+                                            TOASTS
+                                                .lock()
+                                                .unwrap()
+                                                .error("could clear register")
+                                                .set_duration(Some(Duration::from_secs(5)));
+                                        }
+                                    }
                                 }
                             });
                         }

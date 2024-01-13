@@ -39,6 +39,7 @@ use crate::storage::connections_manager::{
     self, ConnectionManager, CONNECTION_NAMES, CURRENT_CONN_ID_FOR_RENAME,
 };
 use crate::storage::custom_logger::CustomLogger;
+use crate::storage::toasts::TOASTS;
 
 use super::connection_widget::ConnectionWidget;
 use super::help_window::HelpWindow;
@@ -136,10 +137,6 @@ impl SvaUI {
     }
 
     pub fn set_language(&mut self, language: Language) {
-        //TODO:
-        //self.vms.iter_mut().for_each(|vm| vm.set_language(language));
-        //self.logger.log2("Change language");
-
         rust_i18n::set_locale(language.string_code());
         CustomLogger::log("Changing language");
         match language {
@@ -180,7 +177,6 @@ impl SvaUI {
     }
 
     fn reconnect_ports(&mut self) {
-        //let mut connections = self.connections.borrow_mut();
         let binding = ConnectionManager::get_connections();
         let mut connections = binding.lock().unwrap();
         for conn in connections.iter_mut() {
@@ -235,20 +231,26 @@ impl SvaUI {
                     }
                     Err(err) => {
                         CustomLogger::log(&format!("{} \n {}", t!("error.import.bad_json"), err));
-                        self.toasts
-                            .info(t!("error.import.bad_json"))
+                        TOASTS
+                            .lock()
+                            .unwrap()
+                            .error(t!("error.import.bad_json"))
                             .set_duration(Some(Duration::from_secs(10)));
                     }
                 }
             }
             Err(err) => {
                 CustomLogger::log(&format!("Could not open file \n {}", err));
-                self.toasts
-                    .info(t!("error.file.cant_open"))
+                TOASTS
+                    .lock()
+                    .unwrap()
+                    .error(t!("error.file.cant_open"))
                     .set_duration(Some(Duration::from_secs(10)));
             }
         }
     }
+
+    // --------------------UI--------------------
 
     /// Shows debug window with logs and global variables
     fn show_debug_window(&mut self, ctx: &Context, ui: &mut Ui) {
@@ -273,6 +275,151 @@ impl SvaUI {
                             ui.label(log);
                         }
                     });
+                });
+            });
+    }
+
+    fn show_save_to_file_dialog(&mut self, ctx: &Context, ui: &mut Ui) {
+        if let Some(dialog) = &mut self.save_file_dialog {
+            if dialog.show(ctx).selected() {
+                if let Some(file) = dialog.path() {
+                    self.opened_file = Some(PathBuf::from(file));
+                    CustomLogger::log(&format!("{:?}", self.opened_file));
+                    self.export_to_file(
+                        self.opened_file
+                            .clone()
+                            .unwrap()
+                            .to_str()
+                            .unwrap()
+                            .to_owned(),
+                    );
+                }
+            }
+        }
+    }
+    fn show_import_file_dialog(&mut self, ctx: &Context, ui: &mut Ui) {
+        // open file dialog
+        if let Some(dialog) = &mut self.open_file_dialog {
+            if dialog.show(ctx).selected() {
+                if let Some(file) = dialog.path() {
+                    self.opened_file = Some(PathBuf::from(file));
+                    CustomLogger::log(&format!("{:?}", self.opened_file));
+                    self.import_file(
+                        self.opened_file
+                            .clone()
+                            .unwrap()
+                            .to_str()
+                            .unwrap()
+                            .to_owned(),
+                    );
+                }
+            }
+        }
+    }
+
+    fn show_connection_name_change_modal(&mut self, ctx: &Context) -> Modal {
+        let change_conn_name_modal = Modal::new(ctx, "change_conn_name_modal");
+        change_conn_name_modal.show(|ui| {
+            change_conn_name_modal.title(ui, "change name");
+
+            ui.text_edit_singleline(&mut self.new_connection_name_buffer);
+            if ui.button("Save").clicked() {
+                let id = *CURRENT_CONN_ID_FOR_RENAME.lock().unwrap();
+                ConnectionManager::set_name(id, self.new_connection_name_buffer.clone());
+
+                self.change_conn_name_modal_open = false;
+                change_conn_name_modal.close();
+            }
+            if ui.button("Cancel").clicked() {
+                self.change_conn_name_modal_open = false;
+                change_conn_name_modal.close();
+            }
+        });
+        change_conn_name_modal
+    }
+
+    fn show_file_menu(&mut self, ui: &mut Ui) {
+        ui.menu_button(t!("menu.file"), |ui| {
+            if ui.button(t!("menu.file.import")).clicked() {
+                let mut dialog = FileDialog::open_file(self.opened_file.clone());
+                dialog.open();
+                self.open_file_dialog = Some(dialog);
+            }
+            if ui.button(t!("menu.file.export")).clicked() {
+                let mut dialog = FileDialog::save_file(self.opened_file.clone());
+                dialog.open();
+                self.save_file_dialog = Some(dialog);
+            }
+        });
+        ui.add_space(16.0);
+    }
+
+    fn show_language_select(&mut self, ui: &mut Ui) {
+        egui::ComboBox::from_label("")
+            .selected_text(format!("{:?}", self.language.string_code()))
+            .show_ui(ui, |ui| {
+                if ui
+                    .selectable_value(&mut self.language, Language::Pl, "Polski")
+                    .changed()
+                {
+                    self.set_language(Language::Pl);
+                }
+                if ui
+                    .selectable_value(&mut self.language, Language::En, "English")
+                    .changed()
+                {
+                    self.set_language(Language::En);
+                }
+            });
+    }
+
+    fn show_component_add_menu(&mut self, ui: &mut Ui) {
+        ui.menu_button(t!("button.add"), |ui| {
+            // vm
+            if ui.button("vm").clicked() {
+                let id = self.vms.last().map_or(0, |last| last.get_id() + 1);
+                let mut x = SVAWindow::new(id, "Vm".to_string(), false);
+                self.vms.push(x);
+            }
+            // vm with stack
+            if ui.button("vm with stack").clicked() {
+                let id = self.vms.last().map_or(0, |last| last.get_id() + 1);
+                let mut x = SVAWindow::new(id, "Vm".to_string(), true);
+                self.vms.push(x);
+            }
+            // ram module
+            if ui.button("ram").clicked() {
+                let id = self.rams.last().map_or(0, |last| last.get_id() + 1);
+
+                self.rams.push(RamWidow::new(id));
+            }
+        });
+    }
+
+    fn show_connections_side_panel(&mut self, ctx: &Context) {
+        egui::SidePanel::right("my_left_panel")
+            .resizable(true)
+            .show(ctx, |ui| {
+                // ui.collapsing("connections", |ui| {
+                ui.heading("Connections");
+                ui.vertical(|ui| {
+                    if ui.button("add").clicked() {
+                        ConnectionManager::create_connection();
+                    }
+                    if ui.button("disconnect").clicked() {
+                        ConnectionManager::toggle_disconnect_mode();
+                    }
+                });
+                ui.separator();
+
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    ui.separator();
+
+                    let conns = ConnectionManager::get_connections().lock().unwrap().clone();
+                    for mut c in conns {
+                        ConnectionWidget::new(c, &mut self.change_conn_name_modal_open)
+                            .show(ctx, ui);
+                    }
                 });
             });
     }
@@ -304,53 +451,36 @@ impl eframe::App for SvaUI {
 
         ctx.set_pixels_per_point(self.ui_size);
 
+        // setting cursor icon
+        if ConnectionManager::get_current_id_index().is_some() {
+            ctx.set_cursor_icon(egui::CursorIcon::Cell);
+        } else if ConnectionManager::in_disconnect_mode() {
+            ctx.set_cursor_icon(egui::CursorIcon::NotAllowed);
+        } else {
+            ctx.set_cursor_icon(egui::CursorIcon::Default);
+        }
+
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            // The top panel is often a good place for a menu bar:
             egui::ScrollArea::horizontal().show(ui, |ui| {
                 egui::menu::bar(ui, |ui| {
                     #[cfg(not(target_arch = "wasm32"))] // no File->Quit on web pages!
                     {
-                        ui.menu_button(t!("menu.file"), |ui| {
-                            if ui.button(t!("menu.file.import")).clicked() {
-                                let mut dialog = FileDialog::open_file(self.opened_file.clone());
-                                dialog.open();
-                                self.open_file_dialog = Some(dialog);
-                            }
-                            if ui.button(t!("menu.file.export")).clicked() {
-                                let mut dialog = FileDialog::save_file(self.opened_file.clone());
-                                dialog.open();
-                                self.save_file_dialog = Some(dialog);
-                            }
-                        });
-                        ui.add_space(16.0);
+                        self.show_file_menu(ui);
                     }
 
                     egui::widgets::global_dark_light_mode_switch(ui);
 
                     ui.separator();
-                    egui::ComboBox::from_label("")
-                        .selected_text(format!("{:?}", self.language.string_code()))
-                        .show_ui(ui, |ui| {
-                            if ui
-                                .selectable_value(&mut self.language, Language::Pl, "Polski")
-                                .changed()
-                            {
-                                self.set_language(Language::Pl);
-                            }
-                            if ui
-                                .selectable_value(&mut self.language, Language::En, "English")
-                                .changed()
-                            {
-                                self.set_language(Language::En);
-                            }
-                        });
+                    self.show_language_select(ui);
                     ui.separator();
+                    // ui scale slider
                     ui.add(
                         egui::Slider::new(&mut self.ui_size, 0.75..=2.25)
                             .step_by(0.25)
                             .text("ui scale"),
                     );
                     ui.separator();
+                    // clear button
                     if ui.button(t!("button.clear")).clicked() {
                         self.vms.clear();
                         self.rams.clear();
@@ -359,28 +489,7 @@ impl eframe::App for SvaUI {
                     }
                     ui.separator();
 
-                    ui.menu_button(t!("button.add"), |ui| {
-                        // vm
-                        if ui.button("vm").clicked() {
-                            let id = self.vms.last().map_or(0, |last| last.get_id() + 1);
-                            let mut x = SVAWindow::new(id, "Vm".to_string(), false);
-                            self.vms.push(x);
-                        }
-                        // vm with stack
-                        if ui.button("vm with stack").clicked() {
-                            let id = self.vms.last().map_or(0, |last| last.get_id() + 1);
-                            let mut x = SVAWindow::new(id, "Vm".to_string(), true);
-                            self.vms.push(x);
-                        }
-                        // ram module
-                        if ui.button("ram").clicked() {
-                            let id = self.rams.last().map_or(0, |last| last.get_id() + 1);
-
-                            self.rams.push(RamWidow::new(id));
-                        }
-                    });
-
-                    ctx.set_cursor_icon(egui::CursorIcon::Default);
+                    self.show_component_add_menu(ui);
 
                     if ui.button(t!("label.help")).clicked() {
                         self.help_widow.toggle_open_close();
@@ -397,42 +506,11 @@ impl eframe::App for SvaUI {
         });
 
         if self.connections_panel_visible {
-            egui::SidePanel::right("my_left_panel")
-                .resizable(true)
-                .show(ctx, |ui| {
-                    // ui.collapsing("connections", |ui| {
-                    ui.heading("Connections");
-                    ui.vertical(|ui| {
-                        if ui.button("add").clicked() {
-                            ConnectionManager::create_connection();
-                        }
-                        if ui.button("disconnect").clicked() {
-                            ConnectionManager::toggle_disconnect_mode();
-                        }
-                    });
-                    ui.separator();
-
-                    egui::ScrollArea::vertical().show(ui, |ui| {
-                        ui.separator();
-
-                        let conns = ConnectionManager::get_connections().lock().unwrap().clone();
-                        for mut c in conns {
-                            ConnectionWidget::new(c, &mut self.change_conn_name_modal_open)
-                                .show(ctx, ui);
-                        }
-                    });
-                    // });
-                });
+            self.show_connections_side_panel(ctx);
         }
 
         // Central panel
-
         egui::CentralPanel::default().show(ctx, |ui| {
-            if ConnectionManager::get_current_id_index().is_some() {
-                ctx.set_cursor_icon(egui::CursorIcon::Cell);
-            } else if ConnectionManager::in_disconnect_mode() {
-                ctx.set_cursor_icon(egui::CursorIcon::NotAllowed);
-            }
             // The central panel the region left after adding TopPanel's and SidePanel's
             ui.separator();
 
@@ -448,47 +526,18 @@ impl eframe::App for SvaUI {
                 ram.show(ctx, ui);
             }
 
+            // powered by
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 powered_by_egui_and_eframe(ui);
                 egui::warn_if_debug_build(ui);
             });
-            // _____________________________________________
 
-            // open file dialog
-            if let Some(dialog) = &mut self.open_file_dialog {
-                if dialog.show(ctx).selected() {
-                    if let Some(file) = dialog.path() {
-                        self.opened_file = Some(PathBuf::from(file));
-                        CustomLogger::log(&format!("{:?}", self.opened_file));
-                        self.import_file(
-                            self.opened_file
-                                .clone()
-                                .unwrap()
-                                .to_str()
-                                .unwrap()
-                                .to_owned(),
-                        );
-                    }
-                }
-            }
+            // file dialogs
+            self.show_save_to_file_dialog(ctx, ui);
 
-            // save to file dialog
-            if let Some(dialog) = &mut self.save_file_dialog {
-                if dialog.show(ctx).selected() {
-                    if let Some(file) = dialog.path() {
-                        self.opened_file = Some(PathBuf::from(file));
-                        CustomLogger::log(&format!("{:?}", self.opened_file));
-                        self.export_to_file(
-                            self.opened_file
-                                .clone()
-                                .unwrap()
-                                .to_str()
-                                .unwrap()
-                                .to_owned(),
-                        );
-                    }
-                }
-            }
+            self.show_import_file_dialog(ctx, ui);
+
+            //help window
             self.help_widow.show(ctx, ui);
 
             // debug window
@@ -496,34 +545,17 @@ impl eframe::App for SvaUI {
 
             // notifications
             self.toasts.show(ctx);
+            {
+                TOASTS.lock().unwrap().show(ctx);
+            }
         }); // Central panel
 
         // Modal for changing connection name
-        let change_conn_name_modal = Modal::new(ctx, "change_conn_name_modal");
-        change_conn_name_modal.show(|ui| {
-            change_conn_name_modal.title(ui, "change name");
-
-            ui.text_edit_singleline(&mut self.new_connection_name_buffer);
-            if ui.button("Save").clicked() {
-                let id = *CURRENT_CONN_ID_FOR_RENAME.lock().unwrap();
-                ConnectionManager::set_name(id, self.new_connection_name_buffer.clone());
-
-                self.change_conn_name_modal_open = false;
-                change_conn_name_modal.close();
-            }
-            if ui.button("Cancel").clicked() {
-                self.change_conn_name_modal_open = false;
-                change_conn_name_modal.close();
-            }
-        });
+        let change_conn_name_modal = self.show_connection_name_change_modal(ctx);
 
         if self.change_conn_name_modal_open {
             change_conn_name_modal.open();
         }
-
-        // modal
-
-        // cursor
     }
 }
 
