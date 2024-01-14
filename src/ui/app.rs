@@ -340,11 +340,20 @@ impl SvaUI {
 
     fn show_file_menu(&mut self, ui: &mut Ui) {
         ui.menu_button(t!("menu.file"), |ui| {
+            // clear button
+            if ui.button(t!("button.clear")).clicked() {
+                self.vms.clear();
+                self.rams.clear();
+
+                ConnectionManager::clear_connections();
+            }
+            // import button
             if ui.button(t!("menu.file.import")).clicked() {
                 let mut dialog = FileDialog::open_file(self.opened_file.clone());
                 dialog.open();
                 self.open_file_dialog = Some(dialog);
             }
+            // export button
             if ui.button(t!("menu.file.export")).clicked() {
                 let mut dialog = FileDialog::save_file(self.opened_file.clone());
                 dialog.open();
@@ -488,14 +497,7 @@ impl eframe::App for SvaUI {
                             vm.set_max_height(max_height);
                         }
                     }
-                    ui.separator();
-                    // clear button
-                    if ui.button(t!("button.clear")).clicked() {
-                        self.vms.clear();
-                        self.rams.clear();
 
-                        ConnectionManager::clear_connections();
-                    }
                     ui.separator();
 
                     self.show_component_add_menu(ui);

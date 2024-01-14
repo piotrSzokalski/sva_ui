@@ -66,6 +66,13 @@ impl RamWidow {
                         }
                         //
                     }
+                    if let Some(id) = self.ram.get_index_port().get_conn_id() {
+                        if let Some(conn_name) = ConnectionManager::get_name(id){
+                            ui.label(conn_name);
+                        }
+                        
+                    }
+                    ui.separator();
                     ui.label("data");
                     if ui.button(format!("{}", self.ram.get_data_port())).clicked() {
                         //
@@ -75,7 +82,7 @@ impl RamWidow {
                                 .unwrap()
                                 .get_mut(conn_index)
                             {
-                                let id = format!("R{}:index", self.get_id().clone());
+                                let id = format!("R{}:data", self.get_id().clone());
 
                                 //self.ram.get_index_port().connect(conn);
                                 self.ram.connect_data_port(conn);
@@ -85,6 +92,12 @@ impl RamWidow {
                             //self.vm.lock().unwrap().disconnect(index);
                         }
                         //
+                    }
+                    if let Some(id) = self.ram.get_data_port().get_conn_id() {
+                        if let Some(conn_name) = ConnectionManager::get_name(id){
+                            ui.label(conn_name);
+                        }
+                        
                     }
                 });
                 //ui.separator();

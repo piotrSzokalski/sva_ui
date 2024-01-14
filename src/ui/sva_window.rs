@@ -230,29 +230,42 @@ impl SVAWindow {
                 ports = self.vm.lock().unwrap().get_ports();
             }
             let mut index = 0;
-            for p in ports {
+            for mut p in ports {
                 let port_button = Button::new(format!("{:?}", p)).stroke(Stroke::new(
                     4.0,
                     *self.port_colors.get(index).unwrap_or(&Color32::LIGHT_GRAY),
                 ));
-                if ui.button(format!("{:?}", p)).clicked() {
-                    if let Some(conn_index) = ConnectionManager::get_current_id_index() {
-                        if let Some(conn) = ConnectionManager::get_connections()
-                            .lock()
-                            .unwrap()
-                            .get_mut(conn_index)
-                        {
-                            let id = self.id.to_string() + "P" + &index.to_string();
-                            self.vm.lock().unwrap().connect_with_id(index, conn, id);
-                        }
-                    } else if ConnectionManager::in_disconnect_mode() {
-                        self.vm.lock().unwrap().disconnect(index);
-                    }
-                }
+                ui.horizontal(|ui|{
 
-                if index < 4 {
-                    index += 1;
-                }
+                    if ui.button(format!("{}", p)).clicked() {
+                        if let Some(conn_index) = ConnectionManager::get_current_id_index() {
+                            if let Some(conn) = ConnectionManager::get_connections()
+                                .lock()
+                                .unwrap()
+                                .get_mut(conn_index)
+                            {
+                                let id = self.id.to_string() + "P" + &index.to_string();
+                                self.vm.lock().unwrap().connect_with_id(index, conn, id);
+                            }
+                        } else if ConnectionManager::in_disconnect_mode() {
+                            self.vm.lock().unwrap().disconnect(index);
+                        }
+                    }
+    
+                    if index < 4 {
+                        index += 1;
+                    }
+
+
+                    if let Some(id) = p.get_conn_id() {
+                        if let Some(conn_name) = ConnectionManager::get_name(id){
+                            ui.label(conn_name);
+                        }
+                        
+                    }
+                });
+
+               
             }
         });
     }
@@ -444,14 +457,13 @@ impl SVAWindow {
             }
         }
         let (acc, pc, flag, r, p, vm_status, delay) = self.vm_state;
-
+        // window
         egui::Window::new(&self.id.to_string())
             .open(&mut true)
             .show(ctx, |ui| {
                 egui::ScrollArea::vertical()
                     .max_height(self.max_hight)
                     .show(ui, |ui| {
-                        ui.label(format!("{}", self.max_hight));
                         // setting vm delay
                         if ui
                             .add(egui::Slider::new(&mut self.delay_ms, 0..=5000).text("delay"))
