@@ -11,7 +11,7 @@ pub struct RamWidow {
     id: usize,
     /// Is widow open
     pub is_open: bool,
-    ram: Ram,
+    pub ram: Ram,
 }
 
 impl RamWidow {
@@ -94,6 +94,33 @@ impl RamWidow {
                         //
                     }
                     if let Some(id) = self.ram.get_data_port().get_conn_id() {
+                        if let Some(conn_name) = ConnectionManager::get_name(id){
+                            ui.label(conn_name);
+                        }
+                        
+                    }
+                    ui.separator();
+                    ui.label("mode");
+                    if ui.button(format!("{}", self.ram.get_mode_port())).clicked() {
+                        //
+                        if let Some(conn_index) = ConnectionManager::get_current_id_index() {
+                            if let Some(conn) = ConnectionManager::get_connections()
+                                .lock()
+                                .unwrap()
+                                .get_mut(conn_index)
+                            {
+                                let id = format!("R{}:mode", self.get_id().clone());
+
+                                //self.ram.get_index_port().connect(conn);
+                                self.ram.connect_mode_port(conn);
+                                conn.add_port_id(id);
+                            }
+                        } else if ConnectionManager::in_disconnect_mode() {
+                            //self.vm.lock().unwrap().disconnect(index);
+                        }
+                        //
+                    }
+                    if let Some(id) = self.ram.get_mode_port().get_conn_id() {
                         if let Some(conn_name) = ConnectionManager::get_name(id){
                             ui.label(conn_name);
                         }

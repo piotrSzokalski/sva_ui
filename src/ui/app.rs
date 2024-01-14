@@ -126,7 +126,8 @@ impl SvaUI {
         if let Some(storage) = cc.storage {
             let mut sav_ui: SvaUI = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
             sav_ui.set_connections_and_their_names();
-            sav_ui.reconnect_ports();
+            sav_ui.reconnect_vm_ports();
+            sav_ui.reconnect_ram_ports();
             sav_ui.logger = CustomLogger::new();
 
             return sav_ui;
@@ -151,13 +152,20 @@ impl SvaUI {
         }
     }
 
-    fn disconnect_ports(&mut self) {
+    fn disconnect_vm_ports(&mut self) {
         for vm in self.vms.iter_mut() {
             for i in 0..4 {
                 {
                     vm.vm.lock().unwrap().disconnect(i);
                 }
             }
+        }
+    }
+
+    fn disconnect_ram_ports(&mut self) {
+        for ram in self.rams.iter_mut() {
+            ram.ram.disconnect_data_port();
+            ram.ram.disconnect_index_port();
         }
     }
 
@@ -176,7 +184,7 @@ impl SvaUI {
         self.conn_names_copies.clear();
     }
 
-    fn reconnect_ports(&mut self) {
+    fn reconnect_vm_ports(&mut self) {
         let binding = ConnectionManager::get_connections();
         let mut connections = binding.lock().unwrap();
         for conn in connections.iter_mut() {
@@ -189,18 +197,36 @@ impl SvaUI {
                     }
                 }
             }
-            for vm in self.vms.iter_mut() {}
         }
     }
 
-    // RENDMEVER TO DIS CONNECT and RECONTECT
+    fn reconnect_ram_ports(&mut self) {
+        let binding = ConnectionManager::get_connections();
+        let mut connections = binding.lock().unwrap();
+        for conn in connections.iter_mut() {
+            let id_pairs = conn.get_connected_rams();
+            for (ram_id, port_index) in id_pairs {
+                let x = self.rams.iter_mut().find(|ram| ram.get_id() == ram_id);
+                if x.is_some() {
+                    if port_index == 0 {
+                        x.unwrap().ram.connect_index_port(conn);
+                    } else if port_index == 1 {
+                        x.unwrap().ram.connect_data_port(conn);
+                    }
+                }
+            }
+        }
+    }
+
     fn export_to_file(&mut self, path: String) {
         self.copy_connections_and_their_names();
-        self.disconnect_ports();
+        self.disconnect_vm_ports();
+        self.disconnect_ram_ports();
 
         let serialized_state = serde_json::to_string(&self);
         self.set_connections_and_their_names();
-        self.reconnect_ports();
+        self.reconnect_vm_ports();
+        self.reconnect_ram_ports();
 
         match serialized_state {
             Ok(data) => {
@@ -227,7 +253,8 @@ impl SvaUI {
                     Ok(sva_ui) => {
                         *self = sva_ui;
                         self.set_connections_and_their_names();
-                        self.reconnect_ports();
+                        self.reconnect_vm_ports();
+                        self.reconnect_ram_ports();
                     }
                     Err(err) => {
                         CustomLogger::log(&format!("{} \n {}", t!("error.import.bad_json"), err));
@@ -439,7 +466,8 @@ impl eframe::App for SvaUI {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         self.copy_connections_and_their_names();
-        self.disconnect_ports();
+        self.disconnect_vm_ports();
+        self.disconnect_ram_ports();
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
