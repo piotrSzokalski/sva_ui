@@ -27,9 +27,10 @@ use simple_virtual_assembler::assembler::assembler::Assembler;
 
 use simple_virtual_assembler::language::Language;
 
-use crate::storage::connections_manager::CONNECTIONS;
 use crate::storage::connections_manager::ConnectionManager;
+use crate::storage::connections_manager::CONNECTIONS;
 use crate::storage::custom_logger::CustomLogger;
+use crate::storage::toasts::ToastsManager;
 use crate::storage::toasts::TOASTS;
 
 use super::indicator_widget::IndicatorWidget;
@@ -236,26 +237,36 @@ impl SVAWindow {
                     4.0,
                     *self.port_colors.get(index).unwrap_or(&Color32::LIGHT_GRAY),
                 ));
-                ui.horizontal(|ui|{
-
+                ui.horizontal(|ui| {
                     if ui.button(format!("{}", p)).clicked() {
+                        let port_is_connected = match p.clone() {
+                            Port::Connected(_, _) => true,
+                            Port::Disconnected(_) => false,
+                        };
+
                         if let Some(conn_index) = ConnectionManager::get_current_id_index() {
                             if let Some(conn) = ConnectionManager::get_connections()
                                 .lock()
                                 .unwrap()
                                 .get_mut(conn_index)
                             {
-                                let id = self.id.to_string() + "P" + &index.to_string();
-                                self.vm.lock().unwrap().connect_with_id(index, conn, id);
+                                if !port_is_connected {
+                                    let id = self.id.to_string() + "P" + &index.to_string();
+                                    self.vm.lock().unwrap().connect_with_id(index, conn, id);
+                                } else {
+                                    ToastsManager::show_info(
+                                        "Can't connect port that is alredy connected".to_owned(),
+                                        10,
+                                    )
+                                }
                             }
                         } else if ConnectionManager::in_disconnect_mode() {
                             let conn_id = p.get_conn_id();
                             let conn_index = ConnectionManager::get_connection_index_by_id(conn_id);
                             if let Some(conn_i) = conn_index {
-                                let mut conns_lock =CONNECTIONS.lock().unwrap();
+                                let mut conns_lock = CONNECTIONS.lock().unwrap();
                                 let conn = conns_lock.get_mut(conn_i);
                                 if let Some(conn_ref) = conn {
-                                    //self.vm.lock().unwrap().disconnect_and_unlist(index, conn_ref);
                                     self.vm.lock().unwrap().disconnect(index);
                                     let p_id = self.id.to_string() + "P" + &index.to_string();
                                     CustomLogger::log(&p_id);
@@ -264,25 +275,19 @@ impl SVAWindow {
                             }
 
                             //self.vm.lock().unwrap().disconnect(index);
-                            
-                            
                         }
                     }
-    
+
                     if index < 4 {
                         index += 1;
                     }
 
-
                     if let Some(id) = p.get_conn_id() {
-                        if let Some(conn_name) = ConnectionManager::get_name(id){
+                        if let Some(conn_name) = ConnectionManager::get_name(id) {
                             ui.label(conn_name);
                         }
-                        
                     }
                 });
-
-               
             }
         });
     }

@@ -18,4 +18,13 @@ impl ToastsManager {
                 duration_seconds.try_into().unwrap_or(5),
             )));
     }
+    pub fn show_info(message: String, duration_seconds: usize) {
+        TOASTS
+            .lock()
+            .unwrap()
+            .info(message)
+            .set_duration(Some(Duration::from_secs(
+                duration_seconds.try_into().unwrap_or(5),
+            )));
+    }
 }
