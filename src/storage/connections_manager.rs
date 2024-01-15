@@ -23,7 +23,9 @@ pub static CONNECTION_NAMES: Lazy<Mutex<HashMap<usize, String>>> =
 
 pub static DISCONNECT_MODE: Lazy<Arc<Mutex<bool>>> = Lazy::new(|| Arc::new(Mutex::new(false)));
 
-pub static NEW_CONNECTION_NAME_BUFFER: Lazy<String> =Lazy::new(||  (String::from("")));
+pub static NEW_CONNECTION_NAME_BUFFER: Lazy<String> = Lazy::new(|| (String::from("")));
+
+//pub static BUFFER_FOR_CONNECTION_REF
 
 pub struct ConnectionManager {}
 
@@ -69,7 +71,7 @@ impl ConnectionManager {
             .iter_mut()
             .find(|c| c.get_id() != id)
         {
-           // let ports =  conn.get_connected_vms_and_ports('P');
+            // let ports =  conn.get_connected_vms_and_ports('P');
             CONNECTIONS.lock().unwrap().retain(|c| c.get_id() != id);
         }
     }
@@ -141,5 +143,29 @@ impl ConnectionManager {
             current = !*DISCONNECT_MODE.lock().unwrap();
         }
         *DISCONNECT_MODE.lock().unwrap() = current;
+    }
+
+    pub fn get_connection_index_by_id(id: Option<usize>) -> Option<usize> {
+        CONNECTIONS
+            .lock()
+            .unwrap()
+            .iter()
+            .position(|c| c.get_id() == id)
+    }
+
+    pub fn get_connection_by_id(id: Option<usize>) -> Option<&'static mut Connection> {
+        let mut index = None;
+        {
+            index = CONNECTIONS
+                .lock()
+                .unwrap()
+                .iter()
+                .position(|c| c.get_id() == id);
+        }
+        if let Some(i) = index {
+            //  return CONNECTIONS.lock().unwrap().get_mut(i);
+            return None;
+        }
+        None
     }
 }

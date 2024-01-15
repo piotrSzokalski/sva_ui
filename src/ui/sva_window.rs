@@ -27,6 +27,7 @@ use simple_virtual_assembler::assembler::assembler::Assembler;
 
 use simple_virtual_assembler::language::Language;
 
+use crate::storage::connections_manager::CONNECTIONS;
 use crate::storage::connections_manager::ConnectionManager;
 use crate::storage::custom_logger::CustomLogger;
 use crate::storage::toasts::TOASTS;
@@ -248,7 +249,23 @@ impl SVAWindow {
                                 self.vm.lock().unwrap().connect_with_id(index, conn, id);
                             }
                         } else if ConnectionManager::in_disconnect_mode() {
-                            self.vm.lock().unwrap().disconnect(index);
+                            let conn_id = p.get_conn_id();
+                            let conn_index = ConnectionManager::get_connection_index_by_id(conn_id);
+                            if let Some(conn_i) = conn_index {
+                                let mut conns_lock =CONNECTIONS.lock().unwrap();
+                                let conn = conns_lock.get_mut(conn_i);
+                                if let Some(conn_ref) = conn {
+                                    //self.vm.lock().unwrap().disconnect_and_unlist(index, conn_ref);
+                                    self.vm.lock().unwrap().disconnect(index);
+                                    let p_id = self.id.to_string() + "P" + &index.to_string();
+                                    CustomLogger::log(&p_id);
+                                    conn_ref.remove_port_id(p_id);
+                                }
+                            }
+
+                            //self.vm.lock().unwrap().disconnect(index);
+                            
+                            
                         }
                     }
     

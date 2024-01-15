@@ -4,7 +4,7 @@ use egui::{Context, Ui};
 use serde::{Deserialize, Serialize};
 use simple_virtual_assembler::components::ram::Ram;
 
-use crate::storage::{ custom_logger::CustomLogger, connections_manager::ConnectionManager};
+use crate::storage::{connections_manager::ConnectionManager, custom_logger::CustomLogger};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RamWidow {
@@ -48,7 +48,8 @@ impl RamWidow {
                         .button(format!("{}", self.ram.get_index_port()))
                         .clicked()
                     {
-                        //
+                        // {}
+
                         if let Some(conn_index) = ConnectionManager::get_current_id_index() {
                             if let Some(conn) = ConnectionManager::get_connections()
                                 .lock()
@@ -62,15 +63,17 @@ impl RamWidow {
                                 conn.add_port_id(id);
                             }
                         } else if ConnectionManager::in_disconnect_mode() {
-                            //self.vm.lock().unwrap().disconnect(index);
+                            let conn_id = self.ram.get_index_port().get_conn_id();
+                            if let Some(conn_id) = conn_id {
+                                //let conn = ConnectionManager::get
+                            }
                         }
                         //
                     }
                     if let Some(id) = self.ram.get_index_port().get_conn_id() {
-                        if let Some(conn_name) = ConnectionManager::get_name(id){
+                        if let Some(conn_name) = ConnectionManager::get_name(id) {
                             ui.label(conn_name);
                         }
-                        
                     }
                     ui.separator();
                     ui.label("data");
@@ -94,10 +97,9 @@ impl RamWidow {
                         //
                     }
                     if let Some(id) = self.ram.get_data_port().get_conn_id() {
-                        if let Some(conn_name) = ConnectionManager::get_name(id){
+                        if let Some(conn_name) = ConnectionManager::get_name(id) {
                             ui.label(conn_name);
                         }
-                        
                     }
                     ui.separator();
                     ui.label("mode");
@@ -121,10 +123,9 @@ impl RamWidow {
                         //
                     }
                     if let Some(id) = self.ram.get_mode_port().get_conn_id() {
-                        if let Some(conn_name) = ConnectionManager::get_name(id){
+                        if let Some(conn_name) = ConnectionManager::get_name(id) {
                             ui.label(conn_name);
                         }
-                        
                     }
                 });
                 //ui.separator();
