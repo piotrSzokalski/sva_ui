@@ -27,6 +27,8 @@ pub static NEW_CONNECTION_NAME_BUFFER: Lazy<String> = Lazy::new(|| (String::from
 
 //pub static BUFFER_FOR_CONNECTION_REF
 
+pub static RELOAD_CONNECTION: Mutex<bool> = Mutex::new(false);
+
 pub struct ConnectionManager {}
 
 impl ConnectionManager {
@@ -65,15 +67,10 @@ impl ConnectionManager {
     }
 
     pub fn remove_connection(id: Option<usize>) {
-        if let Some(conn) = CONNECTIONS
-            .lock()
-            .unwrap()
-            .iter_mut()
-            .find(|c| c.get_id() != id)
-        {
-            // let ports =  conn.get_connected_vms_and_ports('P');
-            CONNECTIONS.lock().unwrap().retain(|c| c.get_id() != id);
-        }
+        CustomLogger::log(&format!("removing connection {:?}", id));
+
+        CONNECTIONS.lock().unwrap().retain(|c| c.get_id() != id);
+        *RELOAD_CONNECTION.lock().unwrap() = true;
     }
 
     pub fn set_connection(state: Vec<Connection>) {

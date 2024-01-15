@@ -58,6 +58,7 @@ impl<'a> ConnectionWidget<'a> {
                 *self.change_conn_name_modal_open = true;
             }
             if ui.button("remove").clicked() {
+                CustomLogger::log("remove conn clicked");
                 ConnectionManager::remove_connection(id);
             }
         });

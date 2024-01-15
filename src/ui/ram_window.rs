@@ -4,7 +4,7 @@ use egui::{Context, Ui};
 use serde::{Deserialize, Serialize};
 use simple_virtual_assembler::components::ram::Ram;
 
-use crate::storage::{connections_manager::ConnectionManager, custom_logger::CustomLogger};
+use crate::storage::{connections_manager::{ConnectionManager, CONNECTIONS}, custom_logger::CustomLogger, toasts::ToastsManager};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RamWidow {
@@ -85,14 +85,40 @@ impl RamWidow {
                                 .unwrap()
                                 .get_mut(conn_index)
                             {
-                                let id = format!("R{}:data", self.get_id().clone());
+                                let already_connected = match self.ram.get_data_port() {
+                                    simple_virtual_assembler::components::port::Port::Connected(_, _) => true,
+                                    simple_virtual_assembler::components::port::Port::Disconnected(_) => false,
+                                };
+                                if ! already_connected {
+                                    let id = format!("R{}:data", self.get_id().clone());
 
-                                //self.ram.get_index_port().connect(conn);
-                                self.ram.connect_data_port(conn);
-                                conn.add_port_id(id);
+                                    //self.ram.get_index_port().connect(conn);
+                                    self.ram.connect_data_port(conn);
+                                    conn.add_port_id(id);
+                                    
+                                } else {
+                                    ToastsManager::show_info(
+                                        "Can't connect port that is alredy connected".to_owned(),
+                                        10,
+                                    )
+                                }
+                            
+
+                            
                             }
                         } else if ConnectionManager::in_disconnect_mode() {
-                            //self.vm.lock().unwrap().disconnect(index);
+                            
+                            let conn_id = self.ram.get_data_port().get_conn_id();
+                            let conn_index = ConnectionManager::get_connection_index_by_id(conn_id);
+                            if let Some(conn_i) = conn_index { 
+                                let mut conns_lock = CONNECTIONS.lock().unwrap();
+                                let conn = conns_lock.get_mut(conn_i);
+                                if let Some(conn_ref) = conn { 
+                                    self.ram.disconnect_data_port();
+                                    let id = format!("R{}:data", self.get_id().clone());
+                                    conn_ref.remove_port_id(id);
+                                }
+                            }
                         }
                         //
                     }

@@ -36,7 +36,7 @@ use wasm_bindgen::prelude::*;
 use web_sys::{js_sys::Array, *};
 
 use crate::storage::connections_manager::{
-    self, ConnectionManager, CONNECTION_NAMES, CURRENT_CONN_ID_FOR_RENAME,
+    self, ConnectionManager, CONNECTION_NAMES, CURRENT_CONN_ID_FOR_RENAME, RELOAD_CONNECTION,
 };
 use crate::storage::custom_logger::CustomLogger;
 use crate::storage::toasts::TOASTS;
@@ -446,6 +446,8 @@ impl SvaUI {
                     if ui.button("disconnect").clicked() {
                         ConnectionManager::toggle_disconnect_mode();
                     }
+
+                    if ui.button("stop connecting/dsconnnecing").clicked() {}
                 });
                 ui.separator();
 
@@ -489,11 +491,35 @@ impl eframe::App for SvaUI {
 
         ctx.set_pixels_per_point(self.ui_scale);
 
+        // reconnect connection after removal
+        {
+            let mut  done_reconnecting = false;
+            if *RELOAD_CONNECTION.lock().unwrap() == true {
+                self.disconnect_ram_ports();
+                self.disconnect_vm_ports();
+                self.reconnect_ram_ports();
+                self.reconnect_vm_ports();
+                done_reconnecting = true;
+            }
+            if done_reconnecting {
+                *RELOAD_CONNECTION.lock().unwrap() = true;
+            }
+        }
+
         // setting cursor icon
+        //ui.label(format!("{:?}", ConnectionManager::get_current_id_index()));
+
+        //ctx.set_cursor_icon(egui::CursorIcon::Default);
+        ctx.output_mut(|o| o.cursor_icon = egui::CursorIcon::ContextMenu);
+        // if ConnectionManager::in_disconnect_mode() {
+        //     ctx.set_cursor_icon(egui::CursorIcon::NoDrop);
+        //     ctx.output_mut(|o| o.cursor_icon = egui::CursorIcon::NoDrop);
+        //     ui.label("IS IN DISCONNECT MODE");
+        // }
         if ConnectionManager::get_current_id_index().is_some() {
-            ctx.set_cursor_icon(egui::CursorIcon::Cell);
-        } else if ConnectionManager::in_disconnect_mode() {
-            ctx.set_cursor_icon(egui::CursorIcon::NotAllowed);
+            //ui.label("IS SOME");
+            // ctx.set_cursor_icon(egui::CursorIcon::Crosshair);
+            ctx.output_mut(|o| o.cursor_icon = egui::CursorIcon::Crosshair);
         } else {
             ctx.set_cursor_icon(egui::CursorIcon::Default);
         }
@@ -507,6 +533,8 @@ impl eframe::App for SvaUI {
                     }
 
                     egui::widgets::global_dark_light_mode_switch(ui);
+
+                    
 
                     ui.separator();
                     self.show_language_select(ui);
@@ -534,10 +562,10 @@ impl eframe::App for SvaUI {
                         self.help_widow.toggle_open_close();
                     }
 
-                    if ui.button("Debug").clicked() {
+                    if ui.button("\u{1F4C1} Debug").clicked() {
                         self.debug_mode = !self.debug_mode;
                     }
-                    if ui.button("connections").clicked() {
+                    if ui.button("connections").on_hover_text("opens connections side panel").clicked() {
                         self.connections_panel_visible = !self.connections_panel_visible;
                     }
                 });
