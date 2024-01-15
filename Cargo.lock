@@ -2289,9 +2289,9 @@ dependencies = [
 
 [[package]]
 name = "rust-i18n"
-version = "2.3.0"
+version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "65f67536f4bd75e6ac34af7d908a060a712be8ccdeaf7514e0718016eb2c39ca"
+checksum = "0689038d25403d8f4437ef84070cacf8c438a9f66fa27402ffaa5d426c6c1019"
 dependencies = [
  "globwalk",
  "once_cell",
@@ -2302,9 +2302,9 @@ dependencies = [
 
 [[package]]
 name = "rust-i18n-macro"
-version = "2.3.0"
+version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8f6a692df009c442deb45dee393bdc741f8b23992472980b249abad9f99e5e2"
+checksum = "8531ce329f57af4dc91cb56f22e17eeb6507f7e80d09c24073fc2c9d334624f1"
 dependencies = [
  "glob",
  "once_cell",
@@ -2487,7 +2487,7 @@ checksum = "d66dc143e6b11c1eddc06d5c423cfc97062865baf299914ab64caa38182078fe"
 [[package]]
 name = "simple_virtual_assembler"
 version = "0.1.0"
-source = "git+https://github.com/piotrSzokalski/simple_virtual_assembler.git?branch=master#4459a6a60f11ecb0d534bc46f6719b9fc274bded"
+source = "git+https://github.com/piotrSzokalski/simple_virtual_assembler.git?branch=master#8b74b500de6c3b4e231914a967d2762be3d137f7"
 dependencies = [
  "rust-i18n",
  "serde",
@@ -3346,9 +3346,9 @@ checksum = "dff9641d1cd4be8d1a070daf9e3773c5f67e78b4d9d42263020c057706765c04"
 
 [[package]]
 name = "winit"
-version = "0.29.9"
+version = "0.29.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2376dab13e09c01ad8b679f0dbc7038af4ec43d9a91344338e37bd686481550"
+checksum = "4c824f11941eeae66ec71111cc2674373c772f482b58939bb4066b642aa2ffcf"
 dependencies = [
  "ahash",
  "android-activity",
