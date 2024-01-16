@@ -166,6 +166,7 @@ impl SvaUI {
         for ram in self.rams.iter_mut() {
             ram.ram.disconnect_data_port();
             ram.ram.disconnect_index_port();
+            ram.ram.disconnect_mode_port();
         }
     }
 
@@ -213,6 +214,9 @@ impl SvaUI {
                     } else if port_index == 1 {
                         x.unwrap().ram.connect_data_port(conn);
                     }
+                    else if port_index == 2 {
+                        x.unwrap().ram.connect_mode_port(conn);
+                    } 
                 }
             }
         }

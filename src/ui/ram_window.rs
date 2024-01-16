@@ -43,42 +43,96 @@ impl RamWidow {
             .show(ctx, |ui| {
                 let values = self.ram.get_data_ref().clone();
                 ui.horizontal(|ui| {
-                    ui.label("index");
-                    if ui
-                        .button(format!("{}", self.ram.get_index_port()))
-                        .clicked()
-                    {
-                        // {}
+                    // ---------------------------------------------------------------------------------------------------------------------
+                    // ui.label("index");
+                    // if ui
+                    //     .button(format!("{}", self.ram.get_index_port()))
+                    //     .clicked()
+                    // {
+                    //     // {}
 
+                    //     if let Some(conn_index) = ConnectionManager::get_current_id_index() {
+                    //         if let Some(conn) = ConnectionManager::get_connections()
+                    //             .lock()
+                    //             .unwrap()
+                    //             .get_mut(conn_index)
+                    //         {
+                    //             let id = format!("R{}:index", self.get_id().clone());
+
+                    //             //self.ram.get_index_port().connect(conn);
+                    //             self.ram.connect_index_port(conn);
+                    //             conn.add_port_id(id);
+                    //         }
+                    //     } else if ConnectionManager::in_disconnect_mode() {
+                    //         let conn_id = self.ram.get_index_port().get_conn_id();
+                    //         if let Some(conn_id) = conn_id {
+                    //             //let conn = ConnectionManager::get
+                    //         }
+                    //     }
+                    //     //
+                    // }
+                    // if let Some(id) = self.ram.get_index_port().get_conn_id() {
+                    //     if let Some(conn_name) = ConnectionManager::get_name(id) {
+                    //         ui.label(conn_name);
+                    //     }
+                    // }
+
+
+                    ui.separator();
+                    ui.label("index");
+                    if ui.button(format!("{}", self.ram.get_index_port())).clicked() {
                         if let Some(conn_index) = ConnectionManager::get_current_id_index() {
                             if let Some(conn) = ConnectionManager::get_connections()
                                 .lock()
                                 .unwrap()
                                 .get_mut(conn_index)
                             {
-                                let id = format!("R{}:index", self.get_id().clone());
+                                let already_connected = match self.ram.get_data_port() {
+                                    simple_virtual_assembler::components::port::Port::Connected(_, _) => true,
+                                    simple_virtual_assembler::components::port::Port::Disconnected(_) => false,
+                                };
+                                if ! already_connected {
+                                    let id = format!("R{}:index", self.get_id().clone());
 
-                                //self.ram.get_index_port().connect(conn);
-                                self.ram.connect_index_port(conn);
-                                conn.add_port_id(id);
+                                    //self.ram.get_index_port().connect(conn);
+                                    self.ram.connect_index_port(conn);
+                                    conn.add_port_id(id);
+                                    
+                                } else {
+                                    ToastsManager::show_info(
+                                        "Can't connect port that is alredy connected".to_owned(),
+                                        10,
+                                    )
+                                }
+                            
+
+                            
                             }
                         } else if ConnectionManager::in_disconnect_mode() {
+                            
                             let conn_id = self.ram.get_index_port().get_conn_id();
-                            if let Some(conn_id) = conn_id {
-                                //let conn = ConnectionManager::get
+                            let conn_index = ConnectionManager::get_connection_index_by_id(conn_id);
+                            if let Some(conn_i) = conn_index { 
+                                let mut conns_lock = CONNECTIONS.lock().unwrap();
+                                let conn = conns_lock.get_mut(conn_i);
+                                if let Some(conn_ref) = conn { 
+                                    self.ram.disconnect_index_port();
+                                    let id = format!("R{}:index", self.get_id().clone());
+                                    conn_ref.remove_port_id(id);
+                                }
                             }
-                        }
-                        //
+                        }          
                     }
                     if let Some(id) = self.ram.get_index_port().get_conn_id() {
                         if let Some(conn_name) = ConnectionManager::get_name(id) {
                             ui.label(conn_name);
                         }
                     }
+                    
+                    // ---------------------------------------------------------------------------------------------------------------------
                     ui.separator();
                     ui.label("data");
                     if ui.button(format!("{}", self.ram.get_data_port())).clicked() {
-                        //
                         if let Some(conn_index) = ConnectionManager::get_current_id_index() {
                             if let Some(conn) = ConnectionManager::get_connections()
                                 .lock()
@@ -119,40 +173,94 @@ impl RamWidow {
                                     conn_ref.remove_port_id(id);
                                 }
                             }
-                        }
-                        //
+                        }          
                     }
                     if let Some(id) = self.ram.get_data_port().get_conn_id() {
                         if let Some(conn_name) = ConnectionManager::get_name(id) {
                             ui.label(conn_name);
                         }
                     }
+                    // ---------------------------------------------------------------------------------------------------------------------
+
+
                     ui.separator();
                     ui.label("mode");
                     if ui.button(format!("{}", self.ram.get_mode_port())).clicked() {
-                        //
                         if let Some(conn_index) = ConnectionManager::get_current_id_index() {
                             if let Some(conn) = ConnectionManager::get_connections()
                                 .lock()
                                 .unwrap()
                                 .get_mut(conn_index)
                             {
-                                let id = format!("R{}:mode", self.get_id().clone());
+                                let already_connected = match self.ram.get_mode_port() {
+                                    simple_virtual_assembler::components::port::Port::Connected(_, _) => true,
+                                    simple_virtual_assembler::components::port::Port::Disconnected(_) => false,
+                                };
+                                if ! already_connected {
+                                    let id = format!("R{}:mode", self.get_id().clone());
 
-                                //self.ram.get_index_port().connect(conn);
-                                self.ram.connect_mode_port(conn);
-                                conn.add_port_id(id);
+                                    //self.ram.get_index_port().connect(conn);
+                                    self.ram.connect_mode_port(conn);
+                                    conn.add_port_id(id);
+                                    
+                                } else {
+                                    ToastsManager::show_info(
+                                        "Can't connect port that is alredy connected".to_owned(),
+                                        10,
+                                    )
+                                }
+                            
+
+                            
                             }
                         } else if ConnectionManager::in_disconnect_mode() {
-                            //self.vm.lock().unwrap().disconnect(index);
-                        }
-                        //
+                            
+                            let conn_id = self.ram.get_mode_port().get_conn_id();
+                            let conn_index = ConnectionManager::get_connection_index_by_id(conn_id);
+                            if let Some(conn_i) = conn_index { 
+                                let mut conns_lock = CONNECTIONS.lock().unwrap();
+                                let conn = conns_lock.get_mut(conn_i);
+                                if let Some(conn_ref) = conn { 
+                                    self.ram.disconnect_mode_port();
+                                    let id = format!("R{}:mode", self.get_id().clone());
+                                    conn_ref.remove_port_id(id);
+                                }
+                            }
+                        }          
                     }
                     if let Some(id) = self.ram.get_mode_port().get_conn_id() {
                         if let Some(conn_name) = ConnectionManager::get_name(id) {
                             ui.label(conn_name);
                         }
                     }
+
+
+                    // ui.separator();
+                    // ui.label("mode");
+                    // if ui.button(format!("{}", self.ram.get_mode_port())).clicked() {
+                    //     //
+                    //     if let Some(conn_index) = ConnectionManager::get_current_id_index() {
+                    //         if let Some(conn) = ConnectionManager::get_connections()
+                    //             .lock()
+                    //             .unwrap()
+                    //             .get_mut(conn_index)
+                    //         {
+                    //             let id = format!("R{}:mode", self.get_id().clone());
+
+                    //             //self.ram.get_index_port().connect(conn);
+                    //             self.ram.connect_mode_port(conn);
+                    //             conn.add_port_id(id);
+                    //         }
+                    //     } else if ConnectionManager::in_disconnect_mode() {
+                    //         //self.vm.lock().unwrap().disconnect(index);
+                    //     }
+                    //     //
+                    // }
+                    // if let Some(id) = self.ram.get_mode_port().get_conn_id() {
+                    //     if let Some(conn_name) = ConnectionManager::get_name(id) {
+                    //         ui.label(conn_name);
+                    //     }
+                    // }
                 });
                 //ui.separator();
                 //ui.label(format!("{:?}", self.ram));
