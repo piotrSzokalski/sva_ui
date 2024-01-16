@@ -480,14 +480,6 @@ impl eframe::App for SvaUI {
         self.reconnect_vm_ports();
         self.set_connections_and_their_names();
     }
-    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
-
-        //println!("Ports disconnected");
-    }
-
-    // fn auto_save_interval(&self) -> Duration {
-    //     Duration::MAX
-    // }
 
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &eframe::egui::Context, frame: &mut eframe::Frame) {
