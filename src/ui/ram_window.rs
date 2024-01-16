@@ -1,10 +1,10 @@
 use std::fmt::format;
 
 use egui::{Context, Ui};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::value};
 use simple_virtual_assembler::components::ram::Ram;
 
-use crate::storage::{connections_manager::{ConnectionManager, CONNECTIONS}, custom_logger::CustomLogger, toasts::ToastsManager};
+use crate::storage::{connections_manager::{ConnectionManager, CONNECTIONS}, custom_logger::CustomLogger, toasts::ToastsManager, modals_manager::{ModalManager, MODAL_INDEX_BUFFER, MODAL_BUFFER_VALUE_I32, RAM_ID}};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RamWidow {
@@ -21,8 +21,8 @@ impl RamWidow {
             ram: Ram::new().with_id(id).with_size(512),
             id,
         };
-        CustomLogger::log("adding ram window");
-        CustomLogger::log(&format!("{:?}", x));
+        //CustomLogger::log("adding ram window");
+       //CustomLogger::log(&format!("{:?}", x));
         x
     }
     pub fn get_id(&self) -> usize {
@@ -55,14 +55,14 @@ impl RamWidow {
                                 .unwrap()
                                 .get_mut(conn_index)
                             {
-                                let already_connected = match self.ram.get_data_port() {
+                                let already_connected = match self.ram.get_index_port() {
                                     simple_virtual_assembler::components::port::Port::Connected(_, _) => true,
                                     simple_virtual_assembler::components::port::Port::Disconnected(_) => false,
                                 };
                                 if ! already_connected {
                                     let id = format!("R{}:index", self.get_id().clone());
 
-                                    //self.ram.get_index_port().connect(conn);
+                            
                                     self.ram.connect_index_port(conn);
                                     conn.add_port_id(id);
                                     
@@ -71,10 +71,7 @@ impl RamWidow {
                                         "Can't connect port that is alredy connected".to_owned(),
                                         10,
                                     )
-                                }
-                            
-
-                            
+                                }                                 
                             }
                         } else if ConnectionManager::in_disconnect_mode() {
                             
@@ -203,15 +200,32 @@ impl RamWidow {
                 ui.separator();
                 ui.collapsing("values", |ui| {
                     egui::ScrollArea::new(true).show(ui, |ui| {
-                        for i in 0..(256 / 8) {
+                        for i in 0..(512 / 8) {
                             ui.horizontal(|ui| {
                                 for j in 0..8 {
-                                    ui.button(format!("{}", values[i * 8 + j]));
+                                    let index = i * 8 + j;
+                                    if ui.button(format!("{}", values[index])).clicked() {
+                                       
+                                        ModalManager::set_modal(1);
+                                        *RAM_ID.lock().unwrap() = Some(self.get_id());
+                                        *MODAL_INDEX_BUFFER.lock().unwrap() = Some(index);
+                                        //
+                                        // if let Some(new_value) =  *MODAL_BUFFER_VALUE_I32.lock().unwrap() {
+                                        //     CustomLogger::log(&format!("setting ram at index:{} to value : {}", index, new_value));
+                                            
+                                        // }
+                                        
+
+                                    };
                                 }
                             });
                         }
                     });
                 });
             });
+    }
+
+    pub fn set_value_at_index(&mut self, index: usize, value: i32) {
+        self.ram.set_value(index, value);
     }
 }

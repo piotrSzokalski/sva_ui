@@ -1,3 +1,4 @@
+use std::borrow::BorrowMut;
 use std::cell::{Ref, RefCell};
 use std::collections::HashMap;
 use std::fs;
@@ -16,6 +17,7 @@ use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
 use egui_file::FileDialog;
 use egui_modal::Modal;
 use env_logger::Logger;
+use serde::de::value;
 use simple_virtual_assembler::assembler::parsing_err::ParsingError;
 use simple_virtual_assembler::components::connection;
 use simple_virtual_assembler::vm::instruction::Instruction;
@@ -39,6 +41,9 @@ use crate::storage::connections_manager::{
     self, ConnectionManager, CONNECTION_NAMES, CURRENT_CONN_ID_FOR_RENAME, RELOAD_CONNECTION,
 };
 use crate::storage::custom_logger::CustomLogger;
+use crate::storage::modals_manager::{
+    ModalManager, MODAL_BUFFER_VALUE_I32, MODAL_INDEX_BUFFER, MODAL_TEXT_EDIT_BUFFER, RAM_ID,
+};
 use crate::storage::toasts::TOASTS;
 
 use super::connection_widget::ConnectionWidget;
@@ -89,7 +94,7 @@ pub struct SvaUI {
 impl Default for SvaUI {
     fn default() -> Self {
         rust_i18n::set_locale("en");
-        Self {
+        let sva_ui = Self {
             // Example stuff:
             // vm_shell: SVAShell::new(0, "First VM window".to_string()),
             language: Language::En,
@@ -110,7 +115,8 @@ impl Default for SvaUI {
             connections_panel_visible: false,
             new_connection_name_buffer: String::new(),
             change_conn_name_modal_open: false,
-        }
+        };
+        sva_ui
     }
 }
 
@@ -213,10 +219,9 @@ impl SvaUI {
                         x.unwrap().ram.connect_index_port(conn);
                     } else if port_index == 1 {
                         x.unwrap().ram.connect_data_port(conn);
-                    }
-                    else if port_index == 2 {
+                    } else if port_index == 2 {
                         x.unwrap().ram.connect_mode_port(conn);
-                    } 
+                    }
                 }
             }
         }
@@ -294,6 +299,11 @@ impl SvaUI {
                     ui.label(format!("{:?}", CONNECTION_NAMES));
                     ui.separator();
                     ui.label(format!("{:?}", ConnectionManager::get_current_id_index()));
+                    ui.separator();
+                    ui.horizontal(|ui| {
+                        ui.label("MODAL VALUE BUFFER (for setting ram)");
+                        ui.label(format!("{:?}", *MODAL_BUFFER_VALUE_I32.lock().unwrap()));
+                    });
                 });
                 ui.collapsing("logs", |ui| {
                     ScrollArea::vertical().max_height(600.0).show(ui, |ui| {
@@ -354,19 +364,81 @@ impl SvaUI {
             change_conn_name_modal.title(ui, "change name");
 
             ui.text_edit_singleline(&mut self.new_connection_name_buffer);
-            if ui.button("Save").clicked() {
-                let id = *CURRENT_CONN_ID_FOR_RENAME.lock().unwrap();
-                ConnectionManager::set_name(id, self.new_connection_name_buffer.clone());
+            ui.horizontal(|ui| {
+                if ui.button("Cancel").clicked() {
+                    self.change_conn_name_modal_open = false;
+                    change_conn_name_modal.close();
+                }
+                if ui.button("Save").clicked() {
+                    let id = *CURRENT_CONN_ID_FOR_RENAME.lock().unwrap();
+                    ConnectionManager::set_name(id, self.new_connection_name_buffer.clone());
 
-                self.change_conn_name_modal_open = false;
-                change_conn_name_modal.close();
-            }
-            if ui.button("Cancel").clicked() {
-                self.change_conn_name_modal_open = false;
-                change_conn_name_modal.close();
-            }
+                    self.change_conn_name_modal_open = false;
+                    change_conn_name_modal.close();
+                }
+            });
         });
         change_conn_name_modal
+    }
+
+    fn set_ram_value(&mut self, value: i32, index: usize) {
+        let ram_id = *RAM_ID.lock().unwrap();
+        if ram_id.clone().is_none() {
+            return;
+        }
+        let ram_id = ram_id.unwrap();
+        let ram = self.rams.iter_mut().find(|ram| ram.get_id() == ram_id);
+        match ram {
+            Some(ram) => {
+                ram.set_value_at_index(index, value);
+            }
+            None => {}
+        }
+    }
+
+    fn create_ram_value_setter_modal(&mut self, ctx: &Context) {
+        let set_ram_value_modal = Modal::new(ctx, "set_ram_value_modal");
+
+        {
+            *MODAL_BUFFER_VALUE_I32.lock().unwrap() = None;
+        }
+
+        set_ram_value_modal.show(|ui| {
+            set_ram_value_modal.title(ui, "set value");
+            let mut buffer = &mut *MODAL_TEXT_EDIT_BUFFER.lock().unwrap();
+
+            ui.text_edit_singleline(buffer);
+
+            let mut can_save = false;
+            let res = buffer.parse::<i32>();
+            match res {
+                Ok(v) => {
+                    *MODAL_BUFFER_VALUE_I32.lock().unwrap() = Some(v);
+                    can_save = true;
+                }
+                Err(_) => {
+                    *MODAL_BUFFER_VALUE_I32.lock().unwrap() = None;
+                }
+            }
+
+            ui.horizontal(|ui| {
+                if ui.button("Cancel").clicked() {
+                    set_ram_value_modal.close();
+                    ModalManager::unset_current_modal();
+                }
+                if can_save {
+                    if ui.button("Save").clicked() {
+                        set_ram_value_modal.close();
+                        ModalManager::unset_current_modal();
+                        let x = MODAL_BUFFER_VALUE_I32.lock().unwrap().unwrap();
+                        let y = MODAL_INDEX_BUFFER.lock().unwrap().unwrap();
+                        self.set_ram_value(x, y);
+                    }
+                }
+            });
+        });
+
+        ModalManager::add_modal(1, set_ram_value_modal);
     }
 
     fn show_file_menu(&mut self, ui: &mut Ui) {
@@ -493,7 +565,7 @@ impl eframe::App for SvaUI {
 
         // reconnect connection after removal
         {
-            let mut  done_reconnecting = false;
+            let mut done_reconnecting = false;
             if *RELOAD_CONNECTION.lock().unwrap() == true {
                 self.disconnect_ram_ports();
                 self.disconnect_vm_ports();
@@ -510,19 +582,23 @@ impl eframe::App for SvaUI {
         //ui.label(format!("{:?}", ConnectionManager::get_current_id_index()));
 
         //ctx.set_cursor_icon(egui::CursorIcon::Default);
-        ctx.output_mut(|o| o.cursor_icon = egui::CursorIcon::ContextMenu);
+        //ctx.output_mut(|o| o.cursor_icon = egui::CursorIcon::ContextMenu);
         // if ConnectionManager::in_disconnect_mode() {
         //     ctx.set_cursor_icon(egui::CursorIcon::NoDrop);
         //     ctx.output_mut(|o| o.cursor_icon = egui::CursorIcon::NoDrop);
         //     ui.label("IS IN DISCONNECT MODE");
         // }
-        if ConnectionManager::get_current_id_index().is_some() {
-            //ui.label("IS SOME");
-            // ctx.set_cursor_icon(egui::CursorIcon::Crosshair);
-            ctx.output_mut(|o| o.cursor_icon = egui::CursorIcon::Crosshair);
-        } else {
-            ctx.set_cursor_icon(egui::CursorIcon::Default);
-        }
+        //if ConnectionManager::get_current_id_index().is_some() {
+        //ui.label("IS SOME");
+        // ctx.set_cursor_icon(egui::CursorIcon::Crosshair);
+        //    ctx.output_mut(|o| o.cursor_icon = egui::CursorIcon::Crosshair);
+        // } else {
+        //    ctx.set_cursor_icon(egui::CursorIcon::Default);
+        //}
+
+        // creating modals
+
+        self.create_ram_value_setter_modal(ctx);
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             egui::ScrollArea::horizontal().show(ui, |ui| {
@@ -533,8 +609,6 @@ impl eframe::App for SvaUI {
                     }
 
                     egui::widgets::global_dark_light_mode_switch(ui);
-
-                    
 
                     ui.separator();
                     self.show_language_select(ui);
@@ -565,7 +639,11 @@ impl eframe::App for SvaUI {
                     if ui.button("\u{1F4C1} Debug").clicked() {
                         self.debug_mode = !self.debug_mode;
                     }
-                    if ui.button("connections").on_hover_text("opens connections side panel").clicked() {
+                    if ui
+                        .button("connections")
+                        .on_hover_text("opens connections side panel")
+                        .clicked()
+                    {
                         self.connections_panel_visible = !self.connections_panel_visible;
                     }
                 });
@@ -623,6 +701,10 @@ impl eframe::App for SvaUI {
         if self.change_conn_name_modal_open {
             change_conn_name_modal.open();
         }
+
+        // Other Modals
+
+        ModalManager::open_modal();
     }
 }
 
