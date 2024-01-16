@@ -330,7 +330,7 @@ impl SVAWindow {
                 egui::ScrollArea::vertical()
                     .max_width(400.0)
                     .show(ui, |ui| {
-                        CodeEditor::default()
+                        let code_editor = CodeEditor::default()
                             .id_source("code editor")
                             .with_rows(12)
                             .with_fontsize(14.0)
@@ -338,10 +338,11 @@ impl SVAWindow {
                             .with_syntax(Syntax::rust())
                             .with_numlines(true)
                             .show(ui, &mut self.code);
+                        if code_editor.response.changed() {
+                            self.try_assemble_and_load();
+                        }
                     });
             });
-        //FIXME: should do this always
-        self.try_assemble_and_load();
     }
 
     fn show_vm_controll_buttons(&mut self, ui: &mut Ui, vm_status: VmStatus) {
@@ -428,13 +429,14 @@ impl SVAWindow {
 
         match res {
             Ok(program) => {
-                //TODO:
-                //temp
-                //self.vm = Arc::new(Mutex::new(VirtualMachine::new_with_program(program)));
+
                 {
                     match self.vm.lock() {
-                        Ok(mut vm) => vm.load_program(program),
-                        Err(err) => CustomLogger::log(&format!("{:?}", err)),
+                        Ok(mut vm) => {
+                            CustomLogger::log("Loading program");
+                            vm.load_program(program);
+                        }
+                        Err(err) => ToastsManager::show_err(format!("{:?}", err), 10),
                     }
                 }
                 //self.vm.load_program(program);
