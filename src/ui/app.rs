@@ -471,19 +471,23 @@ impl SvaUI {
 impl eframe::App for SvaUI {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        CustomLogger::log("auto saving");
         self.copy_connections_and_their_names();
         self.disconnect_vm_ports();
         self.disconnect_ram_ports();
         eframe::set_value(storage, eframe::APP_KEY, self);
+        self.reconnect_ram_ports();
+        self.reconnect_vm_ports();
+        self.set_connections_and_their_names();
     }
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
 
         //println!("Ports disconnected");
     }
 
-    fn auto_save_interval(&self) -> Duration {
-        Duration::MAX
-    }
+    // fn auto_save_interval(&self) -> Duration {
+    //     Duration::MAX
+    // }
 
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &eframe::egui::Context, frame: &mut eframe::Frame) {

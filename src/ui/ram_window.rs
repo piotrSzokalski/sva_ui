@@ -43,39 +43,7 @@ impl RamWidow {
             .show(ctx, |ui| {
                 let values = self.ram.get_data_ref().clone();
                 ui.horizontal(|ui| {
-                    // ---------------------------------------------------------------------------------------------------------------------
-                    // ui.label("index");
-                    // if ui
-                    //     .button(format!("{}", self.ram.get_index_port()))
-                    //     .clicked()
-                    // {
-                    //     // {}
-
-                    //     if let Some(conn_index) = ConnectionManager::get_current_id_index() {
-                    //         if let Some(conn) = ConnectionManager::get_connections()
-                    //             .lock()
-                    //             .unwrap()
-                    //             .get_mut(conn_index)
-                    //         {
-                    //             let id = format!("R{}:index", self.get_id().clone());
-
-                    //             //self.ram.get_index_port().connect(conn);
-                    //             self.ram.connect_index_port(conn);
-                    //             conn.add_port_id(id);
-                    //         }
-                    //     } else if ConnectionManager::in_disconnect_mode() {
-                    //         let conn_id = self.ram.get_index_port().get_conn_id();
-                    //         if let Some(conn_id) = conn_id {
-                    //             //let conn = ConnectionManager::get
-                    //         }
-                    //     }
-                    //     //
-                    // }
-                    // if let Some(id) = self.ram.get_index_port().get_conn_id() {
-                    //     if let Some(conn_name) = ConnectionManager::get_name(id) {
-                    //         ui.label(conn_name);
-                    //     }
-                    // }
+                    
 
 
                     ui.separator();
@@ -210,8 +178,6 @@ impl RamWidow {
                                     )
                                 }
                             
-
-                            
                             }
                         } else if ConnectionManager::in_disconnect_mode() {
                             
@@ -233,37 +199,7 @@ impl RamWidow {
                             ui.label(conn_name);
                         }
                     }
-
-
-                    // ui.separator();
-                    // ui.label("mode");
-                    // if ui.button(format!("{}", self.ram.get_mode_port())).clicked() {
-                    //     //
-                    //     if let Some(conn_index) = ConnectionManager::get_current_id_index() {
-                    //         if let Some(conn) = ConnectionManager::get_connections()
-                    //             .lock()
-                    //             .unwrap()
-                    //             .get_mut(conn_index)
-                    //         {
-                    //             let id = format!("R{}:mode", self.get_id().clone());
-
-                    //             //self.ram.get_index_port().connect(conn);
-                    //             self.ram.connect_mode_port(conn);
-                    //             conn.add_port_id(id);
-                    //         }
-                    //     } else if ConnectionManager::in_disconnect_mode() {
-                    //         //self.vm.lock().unwrap().disconnect(index);
-                    //     }
-                    //     //
-                    // }
-                    // if let Some(id) = self.ram.get_mode_port().get_conn_id() {
-                    //     if let Some(conn_name) = ConnectionManager::get_name(id) {
-                    //         ui.label(conn_name);
-                    //     }
-                    // }
                 });
-                //ui.separator();
-                //ui.label(format!("{:?}", self.ram));
                 ui.separator();
                 ui.collapsing("values", |ui| {
                     egui::ScrollArea::new(true).show(ui, |ui| {
