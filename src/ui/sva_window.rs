@@ -34,6 +34,7 @@ use crate::storage::toasts::ToastsManager;
 use crate::storage::toasts::TOASTS;
 
 use super::indicator_widget::IndicatorWidget;
+use super::syntax::sva_syntax;
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct SVAWindow {
@@ -328,14 +329,15 @@ impl SVAWindow {
             })
             .body(|ui| {
                 egui::ScrollArea::vertical()
+                .max_height(self.max_hight * 0.7)
                     .max_width(400.0)
                     .show(ui, |ui| {
                         let code_editor = CodeEditor::default()
                             .id_source("code editor")
                             .with_rows(12)
                             .with_fontsize(14.0)
-                            .with_theme(ColorTheme::GRUVBOX)
-                            .with_syntax(Syntax::rust())
+                            .with_theme(ColorTheme::GITHUB_DARK)
+                            .with_syntax(sva_syntax())
                             .with_numlines(true)
                             .show(ui, &mut self.code);
                         if code_editor.response.changed() {
@@ -346,6 +348,7 @@ impl SVAWindow {
     }
 
     fn show_vm_controll_buttons(&mut self, ui: &mut Ui, vm_status: VmStatus) {
+        ui.separator();
         if let Some(parsing_error) = &self.parsing_error {
             ui.label(
                 egui::RichText::new(parsing_error.to_string())
@@ -419,8 +422,19 @@ impl SVAWindow {
                         }
                     }
                 }
+                ui.separator();
+                if ui
+                    .add(egui::Slider::new(&mut self.delay_ms, 0..=5000).text("delay"))
+                    .changed()
+                {
+                    self.vm
+                        .lock()
+                        .unwrap()
+                        .set_delay(self.delay_ms.try_into().unwrap());
+                }
             });
         }
+        ui.separator();
     }
 
     /// Tries Assembles code to instructions and loads them to vm
@@ -429,7 +443,6 @@ impl SVAWindow {
 
         match res {
             Ok(program) => {
-
                 {
                     match self.vm.lock() {
                         Ok(mut vm) => {
@@ -439,7 +452,6 @@ impl SVAWindow {
                         Err(err) => ToastsManager::show_err(format!("{:?}", err), 10),
                     }
                 }
-                //self.vm.load_program(program);
                 self.parsing_error = None
             }
             Err(err) => self.parsing_error = Some(err),
@@ -447,10 +459,6 @@ impl SVAWindow {
     }
     /// Execute one instruction FIXME:
     fn step(&mut self) {
-        // if self.vm.lock().unwrap().get_program().is_empty() {
-        //     self.try_assemble_and_load();
-        // }
-
         {
             let mut vm = self.vm.lock().unwrap();
             if vm.get_pc() >= vm.get_program().len() {
@@ -489,19 +497,10 @@ impl SVAWindow {
                     .max_height(self.max_hight)
                     .show(ui, |ui| {
                         // setting vm delay
-                        if ui
-                            .add(egui::Slider::new(&mut self.delay_ms, 0..=5000).text("delay"))
-                            .changed()
-                        {
-                            self.vm
-                                .lock()
-                                .unwrap()
-                                .set_delay(self.delay_ms.try_into().unwrap());
-                        }
-
-                        self.show_vm_controll_buttons(ui, vm_status);
 
                         self.show_code_editor(ui);
+
+                        self.show_vm_controll_buttons(ui, vm_status);
 
                         self.show_registers(ui, acc, ctx, pc, flag, r);
 
