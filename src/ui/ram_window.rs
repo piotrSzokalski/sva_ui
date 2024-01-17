@@ -1,6 +1,6 @@
 use std::fmt::format;
 
-use egui::{Context, Ui};
+use egui::{Context, Ui, Color32, Button, Stroke};
 use serde::{Deserialize, Serialize, de::value};
 use simple_virtual_assembler::components::ram::Ram;
 
@@ -48,17 +48,33 @@ impl RamWidow {
 
                     ui.separator();
                     ui.label("index");
-                    if ui.button(format!("{}", self.ram.get_index_port())).clicked() {
+
+                    let already_connected = match self.ram.get_index_port() {
+                        simple_virtual_assembler::components::port::Port::Connected(_, _) => true,
+                        simple_virtual_assembler::components::port::Port::Disconnected(_) => false,
+                    };
+
+                    let mut port_color = Color32::LIGHT_GRAY;
+
+                    if ConnectionManager::get_current_id_index().is_some() && !already_connected {
+                        port_color = Color32::YELLOW;
+                    } else if ConnectionManager::in_disconnect_mode() && already_connected  {
+                        port_color = Color32::DARK_RED;
+                    }
+    
+                    let index_port_button = Button::new(format!("{}", self.ram.get_index_port())).stroke(Stroke::new(
+                        1.0,
+                        port_color
+                    ));
+
+                    if ui.add_enabled(true, index_port_button).clicked() {
                         if let Some(conn_index) = ConnectionManager::get_current_id_index() {
                             if let Some(conn) = ConnectionManager::get_connections()
                                 .lock()
                                 .unwrap()
                                 .get_mut(conn_index)
                             {
-                                let already_connected = match self.ram.get_index_port() {
-                                    simple_virtual_assembler::components::port::Port::Connected(_, _) => true,
-                                    simple_virtual_assembler::components::port::Port::Disconnected(_) => false,
-                                };
+ 
                                 if ! already_connected {
                                     let id = format!("R{}:index", self.get_id().clone());
 
@@ -96,18 +112,35 @@ impl RamWidow {
                     
                     // ---------------------------------------------------------------------------------------------------------------------
                     ui.separator();
+
+                    let already_connected = match self.ram.get_data_port() {
+                        simple_virtual_assembler::components::port::Port::Connected(_, _) => true,
+                        simple_virtual_assembler::components::port::Port::Disconnected(_) => false,
+                    };
+
+                    let mut port_color = Color32::LIGHT_GRAY;
+
+                    if ConnectionManager::get_current_id_index().is_some() && !already_connected {
+                        port_color = Color32::YELLOW;
+                    } else if ConnectionManager::in_disconnect_mode() && already_connected  {
+                        port_color = Color32::DARK_RED;
+                    }
+    
+                    let data_port_button = Button::new(format!("{}", self.ram.get_data_port())).stroke(Stroke::new(
+                        1.0,
+                        port_color
+                    ));
+
+
                     ui.label("data");
-                    if ui.button(format!("{}", self.ram.get_data_port())).clicked() {
+                    if ui.add_enabled(true, data_port_button).clicked() {
                         if let Some(conn_index) = ConnectionManager::get_current_id_index() {
                             if let Some(conn) = ConnectionManager::get_connections()
                                 .lock()
                                 .unwrap()
                                 .get_mut(conn_index)
                             {
-                                let already_connected = match self.ram.get_data_port() {
-                                    simple_virtual_assembler::components::port::Port::Connected(_, _) => true,
-                                    simple_virtual_assembler::components::port::Port::Disconnected(_) => false,
-                                };
+
                                 if ! already_connected {
                                     let id = format!("R{}:data", self.get_id().clone());
 
@@ -150,17 +183,34 @@ impl RamWidow {
 
                     ui.separator();
                     ui.label("mode");
-                    if ui.button(format!("{}", self.ram.get_mode_port())).clicked() {
+
+                    let already_connected = match self.ram.get_mode_port() {
+                        simple_virtual_assembler::components::port::Port::Connected(_, _) => true,
+                        simple_virtual_assembler::components::port::Port::Disconnected(_) => false,
+                    };
+
+                    let mut port_color = Color32::LIGHT_GRAY;
+
+                    if ConnectionManager::get_current_id_index().is_some() && !already_connected {
+                        port_color = Color32::YELLOW;
+                    } else if ConnectionManager::in_disconnect_mode() && already_connected  {
+                        port_color = Color32::DARK_RED;
+                    }
+    
+                    let data_mode_button = Button::new(format!("{}", self.ram.get_mode_port())).stroke(Stroke::new(
+                        1.0,
+                        port_color
+                    ));
+
+
+                    if ui.add_enabled(true, data_mode_button).clicked() {
                         if let Some(conn_index) = ConnectionManager::get_current_id_index() {
                             if let Some(conn) = ConnectionManager::get_connections()
                                 .lock()
                                 .unwrap()
                                 .get_mut(conn_index)
                             {
-                                let already_connected = match self.ram.get_mode_port() {
-                                    simple_virtual_assembler::components::port::Port::Connected(_, _) => true,
-                                    simple_virtual_assembler::components::port::Port::Disconnected(_) => false,
-                                };
+
                                 if ! already_connected {
                                     let id = format!("R{}:mode", self.get_id().clone());
 
