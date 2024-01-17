@@ -519,11 +519,17 @@ impl SvaUI {
                     if ui.button("add").clicked() {
                         ConnectionManager::create_connection();
                     }
-                    if ui.button("disconnect").clicked() {
+                    let mut disconnect_button_text = "disconnect";
+                    if ConnectionManager::in_disconnect_mode() {
+                        disconnect_button_text = "stop disconnecting";
+                    }
+                    if ui.button(disconnect_button_text).clicked() {
                         ConnectionManager::toggle_disconnect_mode();
                     }
 
-                    if ui.button("stop connecting/dsconnnecing").clicked() {}
+                    if ui.button("stop connecting/disconnecting").clicked() {
+                        ConnectionManager::set_current_id(None);
+                    }
                 });
                 ui.separator();
 

@@ -1,4 +1,6 @@
-use egui::{Context, Ui};
+use std::any::Any;
+
+use egui::{Context, Ui, RichText, Color32};
 use egui_modal::Modal;
 use simple_virtual_assembler::components::connection::Connection;
 
@@ -34,13 +36,23 @@ impl<'a> ConnectionWidget<'a> {
 
         ui.separator();
 
+
+        let mut button_text = "connect".to_owned();
+        let mut color = Color32::GRAY;
+        if ConnectionManager::get_current_id() == self.conn.get_id() {
+            button_text = "stop connecting".to_owned();
+            color = Color32::YELLOW;
+        }
+
         ui.vertical(|ui| {
             ui.horizontal(|ui| {
-                ui.label(format!("{:?}", id));
+                //ui.label(format!("{:?}", id));
                 ui.separator();
-                ui.label(name);
+                ui.heading(RichText::new(name).color(color));
             });
-            let button_text = "connect".to_owned();
+
+
+            
             // it's an index
 
             let current_index = ConnectionManager::get_current_id();
