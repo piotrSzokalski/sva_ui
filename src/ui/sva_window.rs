@@ -71,7 +71,7 @@ pub struct SVAWindow {
     ///Delay ms
     delay_ms: u64,
 
-    port_colors: [Color32; 4],
+   
 
     vm_state: (i32, usize, Flag, [i32; 4], [i32; 4], VmStatus, u32),
 
@@ -112,7 +112,7 @@ impl Default for SVAWindow {
 
             delay_ms: 1000,
 
-            port_colors: [Color32::GRAY, Color32::GRAY, Color32::GRAY, Color32::GRAY],
+            
             vm_state: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
             vm_state_previous: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
             indicators: [
@@ -161,7 +161,7 @@ impl SVAWindow {
 
             delay_ms: 1000,
 
-            port_colors: [Color32::GRAY, Color32::GRAY, Color32::GRAY, Color32::GRAY],
+            
             vm_state: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
             vm_state_previous: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
             indicators: Default::default(),
@@ -222,11 +222,10 @@ impl SVAWindow {
         });
     }
 
-    // runs each frame
+    
 
     fn show_ports(&mut self, ui: &mut Ui) {
         ui.vertical(|ui| {
-            ui.label("p 0-3");
             let ports;
 
             {
@@ -234,16 +233,29 @@ impl SVAWindow {
             }
             let mut index = 0;
             for mut p in ports {
-                let port_button = Button::new(format!("{:?}", p)).stroke(Stroke::new(
-                    4.0,
-                    *self.port_colors.get(index).unwrap_or(&Color32::LIGHT_GRAY),
+                let port_is_connected = match p.clone() {
+                    Port::Connected(_, _) => true,
+                    Port::Disconnected(_) => false,
+                };
+
+                let mut port_color = Color32::LIGHT_GRAY;
+
+                if ConnectionManager::get_current_id_index().is_some() && !port_is_connected {
+                    port_color = Color32::YELLOW;
+                } else if ConnectionManager::in_disconnect_mode() && port_is_connected  {
+                    port_color = Color32::DARK_RED;
+                }
+
+                let port_button = Button::new(format!("{}", p)).stroke(Stroke::new(
+                    1.0,
+                    port_color
                 ));
+
+          
                 ui.horizontal(|ui| {
-                    if ui.button(format!("{}", p)).clicked() {
-                        let port_is_connected = match p.clone() {
-                            Port::Connected(_, _) => true,
-                            Port::Disconnected(_) => false,
-                        };
+                    ui.label(format!("p:{}", index));
+                    if ui.add_enabled(true,port_button).clicked() {
+
 
                         if let Some(conn_index) = ConnectionManager::get_current_id_index() {
                             if let Some(conn) = ConnectionManager::get_connections()
@@ -256,7 +268,7 @@ impl SVAWindow {
                                     self.vm.lock().unwrap().connect_with_id(index, conn, id);
                                 } else {
                                     ToastsManager::show_info(
-                                        "Can't connect port that is alredy connected".to_owned(),
+                                        "Can't connect port that is already connected".to_owned(),
                                         10,
                                     )
                                 }
