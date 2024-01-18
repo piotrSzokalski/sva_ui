@@ -101,7 +101,10 @@ impl Default for SvaUI {
             vms: Vec::new(),
 
             ui_scale: 1.25,
-            help_widow: HelpWindow { is_open: false },
+            help_widow: HelpWindow {
+                is_open: false,
+                language: Language::En,
+            },
 
             logger: CustomLogger::new(),
             debug_mode: false,
@@ -128,7 +131,7 @@ impl SvaUI {
 
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
-        rust_i18n::set_locale("en");
+        //rust_i18n::set_locale("en");
         if let Some(storage) = cc.storage {
             let mut sav_ui: SvaUI = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
             sav_ui.set_connections_and_their_names();
@@ -147,14 +150,18 @@ impl SvaUI {
         rust_i18n::set_locale(language.string_code());
         CustomLogger::log("Changing language");
         match language {
-            Language::Pl => self
-                .vms
-                .iter_mut()
-                .for_each(|vm| vm.set_language(Language::Pl)),
-            Language::En => self
-                .vms
-                .iter_mut()
-                .for_each(|vm| vm.set_language(Language::En)),
+            Language::Pl => {
+                self.vms
+                    .iter_mut()
+                    .for_each(|vm| vm.set_language(Language::Pl));
+                self.help_widow.set_language(Language::Pl);
+            }
+            Language::En => {
+                self.vms
+                    .iter_mut()
+                    .for_each(|vm| vm.set_language(Language::En));
+                self.help_widow.set_language(Language::Pl);
+            }
         }
     }
 
@@ -513,7 +520,6 @@ impl SvaUI {
         egui::SidePanel::right("my_left_panel")
             .resizable(true)
             .show(ctx, |ui| {
-                // ui.collapsing("connections", |ui| {
                 ui.heading("Connections");
                 ui.vertical(|ui| {
                     if ui.button("add").clicked() {

@@ -1,7 +1,4 @@
 _version: 2
-widow.help:
-  en: Help
-  pl: Pomoc
 window.debug:
   en: Debug
   pl: Debug
@@ -53,4 +50,13 @@ sva_shell.button.step:
 sva_shell.code_block:
   en: Code
   pl: Kod
+help_window.title:
+  en: Help
+  pl: Pomoc  
+help_window.collapsing.registers:
+  en: Registers
+  pl: Rejestry
+help_window.collapsing.instructions:
+  en: Instruction set
+  pl: Instrukcje
 
