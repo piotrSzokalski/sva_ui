@@ -7,9 +7,12 @@ use std::cell::Ref;
 use std::cell::RefCell;
 use std::collections::btree_map::Range;
 use std::default;
+use std::panic;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::MutexGuard;
+use std::sync::PoisonError;
 use std::time::Duration;
 
 use egui::{containers::Window, widgets::Label, Context};
@@ -71,11 +74,8 @@ pub struct SVAWindow {
     ///Delay ms
     delay_ms: u64,
 
-   
-
     vm_state: (i32, usize, Flag, [i32; 4], [i32; 4], VmStatus, u32),
 
-    vm_state_previous: (i32, usize, Flag, [i32; 4], [i32; 4], VmStatus, u32),
     #[serde(skip)]
     indicators: [IndicatorWidget; 13],
 
@@ -112,9 +112,8 @@ impl Default for SVAWindow {
 
             delay_ms: 1000,
 
-            
             vm_state: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
-            vm_state_previous: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
+
             indicators: [
                 IndicatorWidget::new("acc".to_owned()),
                 IndicatorWidget::new("pc".to_owned()),
@@ -161,9 +160,8 @@ impl SVAWindow {
 
             delay_ms: 1000,
 
-            
             vm_state: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
-            vm_state_previous: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
+
             indicators: Default::default(),
             conn_ids: [None; 4],
             stack_present,
@@ -179,8 +177,16 @@ impl SVAWindow {
         s
     }
 
-    /// Sets filds that are Rc to new instances to presist state between seralzianon and deseralziaon
-    pub fn set_refs(&mut self) {}
+    pub fn handle_poison_error(&mut self) {
+        ToastsManager::show_info(format!("Resting vm {} due to error", self.id), 10);
+        if self.stack_present {
+            self.vm = Arc::new(Mutex::new(VirtualMachine::new()));
+            self.try_assemble_and_load();
+        } else {
+            self.vm = Arc::new(Mutex::new(VirtualMachine::new().with_stack(32)));
+            self.try_assemble_and_load();
+        }
+    }
 
     pub fn get_id(&self) -> i32 {
         self.id
@@ -222,14 +228,23 @@ impl SVAWindow {
         });
     }
 
-    
-
     fn show_ports(&mut self, ui: &mut Ui) {
+        let mut poison_error = false;
         ui.vertical(|ui| {
-            let ports;
+            let mut ports = [Port::new(0), Port::new(0), Port::new(0), Port::new(0)];
 
             {
-                ports = self.vm.lock().unwrap().get_ports();
+                match self.vm.lock() {
+                    Ok(vm) => {
+                        ports = vm.get_ports();
+                    }
+                    Err(err) => {
+                        poison_error = true;
+                    }
+                }
+            }
+            if poison_error {
+                self.handle_poison_error();
             }
             let mut index = 0;
             for mut p in ports {
@@ -242,21 +257,16 @@ impl SVAWindow {
 
                 if ConnectionManager::get_current_id_index().is_some() && !port_is_connected {
                     port_color = Color32::YELLOW;
-                } else if ConnectionManager::in_disconnect_mode() && port_is_connected  {
+                } else if ConnectionManager::in_disconnect_mode() && port_is_connected {
                     port_color = Color32::DARK_RED;
                 }
 
-                let port_button = Button::new(format!("{}", p)).stroke(Stroke::new(
-                    1.0,
-                    port_color
-                ));
+                let port_button =
+                    Button::new(format!("{}", p)).stroke(Stroke::new(1.0, port_color));
 
-          
                 ui.horizontal(|ui| {
                     ui.label(format!("p:{}", index));
-                    if ui.add_enabled(true,port_button).clicked() {
-
-
+                    if ui.add_enabled(true, port_button).clicked() {
                         if let Some(conn_index) = ConnectionManager::get_current_id_index() {
                             if let Some(conn) = ConnectionManager::get_connections()
                                 .lock()
@@ -265,7 +275,18 @@ impl SVAWindow {
                             {
                                 if !port_is_connected {
                                     let id = self.id.to_string() + "P" + &index.to_string();
-                                    self.vm.lock().unwrap().connect_with_id(index, conn, id);
+
+                                    //  self.vm.lock().unwrap().connect_with_id(index, conn, id);
+                                    {
+                                        let lock = self.vm.lock();
+                                        match lock {
+                                            Ok(mut vm) => vm.connect_with_id(index, conn, id),
+                                            Err(err) => poison_error = true,
+                                        }
+                                    }
+                                    if poison_error {
+                                        self.handle_poison_error();
+                                    }
                                 } else {
                                     ToastsManager::show_info(
                                         "Can't connect port that is already connected".to_owned(),
@@ -280,14 +301,22 @@ impl SVAWindow {
                                 let mut conns_lock = CONNECTIONS.lock().unwrap();
                                 let conn = conns_lock.get_mut(conn_i);
                                 if let Some(conn_ref) = conn {
-                                    self.vm.lock().unwrap().disconnect(index);
-                                    let p_id = self.id.to_string() + "P" + &index.to_string();
-                                    CustomLogger::log(&p_id);
-                                    conn_ref.remove_port_id(p_id);
+                                    //self.vm.lock().unwrap().disconnect(index);
+                                    {
+                                        let lock = self.vm.lock();
+                                        match lock {
+                                            Ok(mut vm) => vm.disconnect(index),
+                                            Err(err) => poison_error = true,
+                                        }
+                                        let p_id = self.id.to_string() + "P" + &index.to_string();
+                                        CustomLogger::log(&p_id);
+                                        conn_ref.remove_port_id(p_id);
+                                    }
+                                    if poison_error {
+                                        self.handle_poison_error();
+                                    }
                                 }
                             }
-
-                            //self.vm.lock().unwrap().disconnect(index);
                         }
                     }
 
@@ -341,7 +370,7 @@ impl SVAWindow {
             })
             .body(|ui| {
                 egui::ScrollArea::vertical()
-                .max_height(self.max_hight * 0.7)
+                    .max_height(self.max_hight * 0.7)
                     .max_width(400.0)
                     .show(ui, |ui| {
                         let code_editor = CodeEditor::default()
@@ -471,25 +500,33 @@ impl SVAWindow {
     }
     /// Execute one instruction FIXME:
     fn step(&mut self) {
+        let mut poison_err = false;
         {
-            let mut vm = self.vm.lock().unwrap();
-            if vm.get_pc() >= vm.get_program().len() {
-                vm.clear_registers();
-            }
-        }
+            let mut vm_lock = self.vm.lock();
 
-        match self.parsing_error {
-            Some(_) => todo!(),
-            None => {
-                self.vm.lock().unwrap().execute();
+            match vm_lock {
+                Ok(mut vm) => {
+                    if vm.get_pc() >= vm.get_program().len() {
+                        vm.clear_registers();
+                    }
+                }
+                Err(_err) => poison_err = true,
             }
         }
+        if poison_err {
+            self.handle_poison_error();
+        }
+        panic::catch_unwind(|| {
+            self.vm.lock().unwrap().execute();
+        })
+        .unwrap_or_else(|_err| {
+            self.handle_poison_error();
+        });
     }
 
     pub fn show(&mut self, ctx: &Context, ui: &mut Ui) {
+        let mut poison_error = false;
         {
-            self.vm_state_previous = self.vm_state;
-
             match self.vm.lock() {
                 Ok(vm) => {
                     self.vm_state = vm.get_state_for_display();
@@ -497,8 +534,15 @@ impl SVAWindow {
                         self.stack_data = vm.get_stack();
                     }
                 }
-                Err(err) => CustomLogger::log(&format!("{:?}", err)),
+                Err(err) => {
+                    poison_error = true;
+
+                    ToastsManager::show_err(format!("{}", err), 10);
+                }
             }
+        }
+        if poison_error {
+            self.handle_poison_error();
         }
         let (acc, pc, flag, r, p, vm_status, delay) = self.vm_state;
         // window
