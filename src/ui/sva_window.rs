@@ -150,7 +150,7 @@ impl SVAWindow {
             .collect();
         let mut s = SVAWindow {
             id,
-            name: format!("{}", id),
+            name: format!("vm:{}", id),
             vm: Arc::new(Mutex::new(VirtualMachine::new())),
             assembler: Assembler::new(),
             code: String::new(),
@@ -391,7 +391,7 @@ impl SVAWindow {
         let id = ui.make_persistent_id("Vm code heder");
         egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, false)
             .show_header(ui, |ui| {
-                ui.heading(t!("sva_shell.code_block"));
+                ui.label(t!("sva_shell.code_block"));
             })
             .body(|ui| {
                 egui::ScrollArea::vertical()
@@ -578,6 +578,7 @@ impl SVAWindow {
         let (acc, pc, flag, r, p, vm_status, delay) = self.vm_state;
         // window
         egui::Window::new(&self.name)
+        .id(egui::Id::new(format!("vm:{}", self.id)))
             .max_height(self.max_hight)
             .scroll2(true)
             .show(ctx, |ui| {

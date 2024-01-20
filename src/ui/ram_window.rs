@@ -26,7 +26,7 @@ impl RamWidow {
             is_open: true,
             ram: Ram::new().with_id(id).with_size(512),
             id,
-            name: id.to_string(),
+            name: format!("ram:{}", id),
         };
         //CustomLogger::log("adding ram window");
         //CustomLogger::log(&format!("{:?}", x));
@@ -35,6 +35,14 @@ impl RamWidow {
     pub fn get_id(&self) -> usize {
         self.id
     }
+
+    pub fn get_name(&self) -> String {
+        self.name.clone()
+    }
+    pub fn set_name(&mut self, name: String) {
+        self.name = name;
+    }
+
     /// Toggle weather help widows is open or closed
     pub fn toggle_open_close(&mut self) {
         self.is_open = !self.is_open;
@@ -46,7 +54,7 @@ impl RamWidow {
 
     pub fn show(&mut self, ctx: &Context, ui: &mut Ui) {
         egui::Window::new(&self.name)
-            .open(&mut true)
+            .id(egui::Id::new(format!("ram:{}", self.id)))
             .show(ctx, |ui| {
                 let values = self.ram.get_data_ref().clone();
                 ui.horizontal(|ui| {

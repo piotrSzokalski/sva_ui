@@ -95,6 +95,8 @@ pub struct SvaUI {
 
     active_vms: HashMap<usize, bool>,
 
+    active_rams: HashMap<usize, bool>,
+
     component_change_name_is_ram: Option<bool>,
     component_change_name_id: Option<usize>,
     component_change_name_buffer: String,
@@ -132,6 +134,7 @@ impl Default for SvaUI {
             component_change_name_is_ram: None,
             component_change_name_id: None,
             component_change_name_buffer: String::new(),
+            active_rams: HashMap::new(),
         };
         sva_ui
     }
@@ -420,6 +423,14 @@ impl SvaUI {
         }
     }
 
+    fn change_ram_name(&mut self, id: usize, name: String) {
+        let res = self.rams.iter_mut().find(|ram| ram.get_id() == id);
+        match res {
+            Some(ram) => ram.set_name(name),
+            None => ToastsManager::show_err("Could not change name of vm".to_owned(), 10),
+        }
+    }
+
     fn change_vm_name(&mut self, id: usize, name: String) {
         let res = self.vms.iter_mut().find(|vm| vm.get_id() == id);
         match res {
@@ -427,7 +438,7 @@ impl SvaUI {
                 vm.set_name(name);
                 ToastsManager::show_info("vm namge chageed".to_owned(), 5);
             }
-            None => ToastsManager::show_err("Could not change name of vm".to_owned(), 12),
+            None => ToastsManager::show_err("Could not change name of vm".to_owned(), 10),
         }
     }
 
@@ -443,7 +454,10 @@ impl SvaUI {
                 }
                 if ui.button("Save").clicked() {
                     if self.component_change_name_is_ram == Some(true) {
-                        //
+                        self.change_ram_name(
+                            self.component_change_name_id.unwrap(),
+                            buffer.to_string(),
+                        );
                     } else if self.component_change_name_is_ram == Some(false) {
                         self.change_vm_name(
                             self.component_change_name_id.unwrap(),
@@ -451,12 +465,14 @@ impl SvaUI {
                         );
                     } else {
                     }
-
+                    self.component_change_name_is_ram = None;
+                    self.component_change_name_id = None;
                     change_component_name_modal.close();
                     ModalManager::unset_current_modal();
                 }
             });
         });
+
         ModalManager::add_modal(2, change_component_name_modal);
     }
 
@@ -573,7 +589,7 @@ impl SvaUI {
             // ram module
             if ui.button("ram").clicked() {
                 let id = self.rams.last().map_or(0, |last| last.get_id() + 1);
-
+                self.active_rams.insert(id, true);
                 self.rams.push(RamWidow::new(id));
             }
         });
@@ -586,12 +602,6 @@ impl SvaUI {
                 let mut actions = vec![ComponentAction::DoNothing];
                 ui.heading("Components");
                 ui.label(format!("{:?}", actions));
-
-                // let x = ComponentListWidget::new(0, "test".to_owned(), true, None, true, true)
-                //     .show(ctx, ui);
-                // if x != ComponentAction::DoNothing {
-                //     ToastsManager::show_info(format!("{:?}", x), 5);
-                // }
 
                 ui.collapsing("VMs", |ui| {
                     ScrollArea::new(true).show(ui, |ui| {
@@ -611,7 +621,21 @@ impl SvaUI {
                         }
                     });
                 });
-                ui.collapsing("RAMs", |ui| {});
+                ui.collapsing("RAMs", |ui| {
+                    for ram in &self.rams {
+                        actions.push(
+                            ComponentListWidget::new(
+                                ram.get_id(),
+                                ram.get_name(),
+                                true,
+                                None,
+                                false,
+                                false,
+                            )
+                            .show(ctx, ui),
+                        );
+                    }
+                });
                 ScrollArea::new(true).show(ui, |ui| {});
                 for action in actions {
                     match action {
@@ -630,7 +654,11 @@ impl SvaUI {
                             self.component_change_name_is_ram = Some(false);
                             self.component_change_name_id = Some(id);
                         }
-                        ComponentAction::ToggleRamVisibility(_) => {}
+                        ComponentAction::ToggleRamVisibility(id) => {
+                            if let Some(value) = self.active_rams.get_mut(&id) {
+                                *value = !*value; // Toggle the boolean value
+                            }
+                        }
                         ComponentAction::RenameRam(id) => {
                             self.component_change_name_is_ram = Some(true);
                             self.component_change_name_id = Some(id);
@@ -806,7 +834,10 @@ impl eframe::App for SvaUI {
             // rams
             for index in 0..self.rams.len() {
                 let ram = &mut self.rams[index];
-                ram.show(ctx, ui);
+                let active = *self.active_rams.get(&ram.get_id()).unwrap_or(&false);
+                if active {
+                    ram.show(ctx, ui);
+                }
             }
 
             // powered by
