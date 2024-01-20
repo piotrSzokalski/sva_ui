@@ -44,8 +44,9 @@ use crate::storage::custom_logger::CustomLogger;
 use crate::storage::modals_manager::{
     ModalManager, MODAL_BUFFER_VALUE_I32, MODAL_INDEX_BUFFER, MODAL_TEXT_EDIT_BUFFER, RAM_ID,
 };
-use crate::storage::toasts::TOASTS;
+use crate::storage::toasts::{ToastsManager, TOASTS};
 
+use super::component_list_widget::{ComponentAction, ComponentListWidget};
 use super::connection_widget::ConnectionWidget;
 use super::help_window::HelpWindow;
 use super::ram_window::RamWidow;
@@ -86,9 +87,17 @@ pub struct SvaUI {
 
     connections_panel_visible: bool,
 
+    components_panel_visible: bool,
+
     new_connection_name_buffer: String,
 
     change_conn_name_modal_open: bool,
+
+    active_vms: HashMap<usize, bool>,
+
+    component_change_name_is_ram: Option<bool>,
+    component_change_name_id: Option<usize>,
+    component_change_name_buffer: String,
 }
 
 impl Default for SvaUI {
@@ -118,6 +127,11 @@ impl Default for SvaUI {
             connections_panel_visible: false,
             new_connection_name_buffer: String::new(),
             change_conn_name_modal_open: false,
+            components_panel_visible: true,
+            active_vms: HashMap::new(),
+            component_change_name_is_ram: None,
+            component_change_name_id: None,
+            component_change_name_buffer: String::new(),
         };
         sva_ui
     }
@@ -204,7 +218,10 @@ impl SvaUI {
         for conn in connections.iter_mut() {
             let id_pairs = conn.get_connected_vms_and_ports('P');
             for (vm_id, port_index) in id_pairs {
-                let x = self.vms.iter().find(|vm| vm.get_id() == vm_id);
+                let x = self
+                    .vms
+                    .iter()
+                    .find(|vm| vm.get_id() == TryInto::<usize>::try_into(vm_id).unwrap());
                 if x.is_some() {
                     {
                         x.unwrap().vm.lock().unwrap().connect(port_index, conn);
@@ -403,6 +420,46 @@ impl SvaUI {
         }
     }
 
+    fn change_vm_name(&mut self, id: usize, name: String) {
+        let res = self.vms.iter_mut().find(|vm| vm.get_id() == id);
+        match res {
+            Some(vm) => {
+                vm.set_name(name);
+                ToastsManager::show_info("vm namge chageed".to_owned(), 5);
+            }
+            None => ToastsManager::show_err("Could not change name of vm".to_owned(), 12),
+        }
+    }
+
+    fn crate_component_change_name_modal(&mut self, ctx: &Context) {
+        let change_component_name_modal = Modal::new(ctx, "change_component_name_modal");
+        change_component_name_modal.show(|ui| {
+            let mut buffer = &mut *MODAL_TEXT_EDIT_BUFFER.lock().unwrap();
+            ui.text_edit_singleline(buffer);
+            ui.horizontal(|ui| {
+                if ui.button("Cancel").clicked() {
+                    change_component_name_modal.close();
+                    ModalManager::unset_current_modal();
+                }
+                if ui.button("Save").clicked() {
+                    if self.component_change_name_is_ram == Some(true) {
+                        //
+                    } else if self.component_change_name_is_ram == Some(false) {
+                        self.change_vm_name(
+                            self.component_change_name_id.unwrap(),
+                            buffer.to_string(),
+                        );
+                    } else {
+                    }
+
+                    change_component_name_modal.close();
+                    ModalManager::unset_current_modal();
+                }
+            });
+        });
+        ModalManager::add_modal(2, change_component_name_modal);
+    }
+
     fn create_ram_value_setter_modal(&mut self, ctx: &Context) {
         let set_ram_value_modal = Modal::new(ctx, "set_ram_value_modal");
 
@@ -430,16 +487,20 @@ impl SvaUI {
 
             ui.horizontal(|ui| {
                 if ui.button("Cancel").clicked() {
+                    //{ MODAL_TEXT_EDIT_BUFFER.lock().unwrap().clear();}
                     set_ram_value_modal.close();
                     ModalManager::unset_current_modal();
                 }
                 if can_save {
                     if ui.button("Save").clicked() {
+                        //{
                         set_ram_value_modal.close();
                         ModalManager::unset_current_modal();
                         let x = MODAL_BUFFER_VALUE_I32.lock().unwrap().unwrap();
                         let y = MODAL_INDEX_BUFFER.lock().unwrap().unwrap();
                         self.set_ram_value(x, y);
+                        //}
+                        // MODAL_TEXT_EDIT_BUFFER.lock().unwrap().clear();
                     }
                 }
             });
@@ -449,7 +510,7 @@ impl SvaUI {
     }
 
     fn show_file_menu(&mut self, ui: &mut Ui) {
-        ui.menu_button(t!("menu.file"), |ui| {
+        ui.menu_button(format!("\u{1F4C1} {}", t!("menu.file")), |ui| {
             // clear button
             if ui.button(t!("button.clear")).clicked() {
                 self.vms.clear();
@@ -498,13 +559,15 @@ impl SvaUI {
             // vm
             if ui.button("vm").clicked() {
                 let id = self.vms.last().map_or(0, |last| last.get_id() + 1);
-                let mut x = SVAWindow::new(id, "Vm".to_string(), false, max_height);
+                let mut x = SVAWindow::new(id, false, max_height);
+                self.active_vms.insert(id, true);
                 self.vms.push(x);
             }
             // vm with stack
             if ui.button("vm with stack").clicked() {
                 let id = self.vms.last().map_or(0, |last| last.get_id() + 1);
-                let mut x = SVAWindow::new(id, "Vm".to_string(), true, max_height);
+                let mut x = SVAWindow::new(id, true, max_height);
+                self.active_vms.insert(id, true);
                 self.vms.push(x);
             }
             // ram module
@@ -516,8 +579,74 @@ impl SvaUI {
         });
     }
 
+    fn show_components_side_panel(&mut self, ctx: &Context) {
+        egui::SidePanel::right("components_panel")
+            .resizable(true)
+            .show(ctx, |ui| {
+                let mut actions = vec![ComponentAction::DoNothing];
+                ui.heading("Components");
+                ui.label(format!("{:?}", actions));
+
+                // let x = ComponentListWidget::new(0, "test".to_owned(), true, None, true, true)
+                //     .show(ctx, ui);
+                // if x != ComponentAction::DoNothing {
+                //     ToastsManager::show_info(format!("{:?}", x), 5);
+                // }
+
+                ui.collapsing("VMs", |ui| {
+                    ScrollArea::new(true).show(ui, |ui| {
+                        for vm in &self.vms {
+                            let id = vm.get_id();
+                            actions.push(
+                                ComponentListWidget::new(
+                                    id,
+                                    vm.get_name(),
+                                    true,
+                                    None,
+                                    true,
+                                    vm.has_stack(),
+                                )
+                                .show(ctx, ui),
+                            );
+                        }
+                    });
+                });
+                ui.collapsing("RAMs", |ui| {});
+                ScrollArea::new(true).show(ui, |ui| {});
+                for action in actions {
+                    match action {
+                        ComponentAction::DoNothing => {}
+                        ComponentAction::ToggleVmVisibility(id) => {
+                            if let Some(value) = self.active_vms.get_mut(&id) {
+                                *value = !*value; // Toggle the boolean value
+                            }
+                        }
+                        ComponentAction::RenameVm(id) => {
+                            self.component_change_name_is_ram = Some(false);
+                            self.component_change_name_id = Some(id);
+                            ModalManager::set_modal(2);
+                        }
+                        ComponentAction::RemoveVm(id) => {
+                            self.component_change_name_is_ram = Some(false);
+                            self.component_change_name_id = Some(id);
+                        }
+                        ComponentAction::ToggleRamVisibility(_) => {}
+                        ComponentAction::RenameRam(id) => {
+                            self.component_change_name_is_ram = Some(true);
+                            self.component_change_name_id = Some(id);
+                            ModalManager::set_modal(2);
+                        }
+                        ComponentAction::RemoveRam(id) => {
+                            self.component_change_name_is_ram = Some(true);
+                            self.component_change_name_id = Some(id);
+                        }
+                    }
+                }
+            });
+    }
+
     fn show_connections_side_panel(&mut self, ctx: &Context) {
-        egui::SidePanel::right("my_left_panel")
+        egui::SidePanel::right("connections_panel")
             .resizable(true)
             .show(ctx, |ui| {
                 ui.heading("Connections");
@@ -590,27 +719,10 @@ impl eframe::App for SvaUI {
             }
         }
 
-        // setting cursor icon
-        //ui.label(format!("{:?}", ConnectionManager::get_current_id_index()));
-
-        //ctx.set_cursor_icon(egui::CursorIcon::Default);
-        //ctx.output_mut(|o| o.cursor_icon = egui::CursorIcon::ContextMenu);
-        // if ConnectionManager::in_disconnect_mode() {
-        //     ctx.set_cursor_icon(egui::CursorIcon::NoDrop);
-        //     ctx.output_mut(|o| o.cursor_icon = egui::CursorIcon::NoDrop);
-        //     ui.label("IS IN DISCONNECT MODE");
-        // }
-        //if ConnectionManager::get_current_id_index().is_some() {
-        //ui.label("IS SOME");
-        // ctx.set_cursor_icon(egui::CursorIcon::Crosshair);
-        //    ctx.output_mut(|o| o.cursor_icon = egui::CursorIcon::Crosshair);
-        // } else {
-        //    ctx.set_cursor_icon(egui::CursorIcon::Default);
-        //}
-
         // creating modals
 
         self.create_ram_value_setter_modal(ctx);
+        self.crate_component_change_name_modal(ctx);
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             egui::ScrollArea::horizontal().show(ui, |ui| {
@@ -648,19 +760,30 @@ impl eframe::App for SvaUI {
                         self.help_widow.toggle_open_close();
                     }
 
-                    if ui.button("\u{1F4C1} Debug").clicked() {
+                    if ui.button("Debug").clicked() {
                         self.debug_mode = !self.debug_mode;
                     }
                     if ui
                         .button("connections")
-                        .on_hover_text("opens connections side panel")
+                        .on_hover_text("opens panel with connections")
                         .clicked()
                     {
                         self.connections_panel_visible = !self.connections_panel_visible;
                     }
+                    if ui
+                        .button("components")
+                        .on_hover_text("opens panel with components")
+                        .clicked()
+                    {
+                        self.components_panel_visible = !self.components_panel_visible;
+                    }
                 });
             });
         });
+
+        if self.components_panel_visible {
+            self.show_components_side_panel(ctx);
+        }
 
         if self.connections_panel_visible {
             self.show_connections_side_panel(ctx);
@@ -669,13 +792,16 @@ impl eframe::App for SvaUI {
         // Central panel
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            
 
             // vms
             for index in 0..self.vms.len() {
                 let vm = &mut self.vms[index];
 
-                vm.show(ctx, ui);
+                let active = *self.active_vms.get(&vm.get_id()).unwrap_or(&false);
+
+                if active {
+                    vm.show(ctx, ui);
+                }
             }
             // rams
             for index in 0..self.rams.len() {

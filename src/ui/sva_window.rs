@@ -42,9 +42,9 @@ use super::syntax::sva_syntax;
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct SVAWindow {
     /// Id
-    id: i32,
+    id: usize,
     /// Tile
-    title: String,
+    name: String,
 
     /// Simple virtual machine
     pub vm: Arc<Mutex<VirtualMachine>>,
@@ -88,6 +88,8 @@ pub struct SVAWindow {
     stack_indicators: Vec<IndicatorWidget>,
 
     max_hight: f32,
+    /// determine if window is open, closed windows get deleted
+    active: bool,
 }
 
 impl Default for SVAWindow {
@@ -98,8 +100,8 @@ impl Default for SVAWindow {
             .map(|index| IndicatorWidget::new("".to_owned()))
             .collect();
         Self {
-            id: -1,
-            title: "BRAK".to_owned(),
+            id: 0,
+            name: format!("{}", 0).to_owned(),
             vm: Arc::new(Mutex::new(VirtualMachine::new())),
             assembler: Assembler::new(),
             code: String::new(),
@@ -134,12 +136,13 @@ impl Default for SVAWindow {
             stack_data: Vec::new(),
             stack_indicators,
             max_hight: 1000.0,
+            active: true,
         }
     }
 }
 
 impl SVAWindow {
-    pub fn new(id: i32, title: String, stack_present: bool, max_hight: f32) -> SVAWindow {
+    pub fn new(id: usize, stack_present: bool, max_hight: f32) -> SVAWindow {
         let stack_indicators = (0..32)
             .collect::<Vec<i32>>()
             .iter()
@@ -147,7 +150,7 @@ impl SVAWindow {
             .collect();
         let mut s = SVAWindow {
             id,
-            title,
+            name: format!("{}", id),
             vm: Arc::new(Mutex::new(VirtualMachine::new())),
             assembler: Assembler::new(),
             code: String::new(),
@@ -168,6 +171,7 @@ impl SVAWindow {
             stack_data: Vec::new(),
             stack_indicators: stack_indicators,
             max_hight,
+            active: true,
         };
         if stack_present {
             s.assembler = Assembler::new().with_stack();
@@ -187,9 +191,20 @@ impl SVAWindow {
             self.try_assemble_and_load();
         }
     }
+    pub fn has_stack(&self) -> bool {
+        self.stack_present
+    }
 
-    pub fn get_id(&self) -> i32 {
+    pub fn get_id(&self) -> usize {
         self.id
+    }
+
+    pub fn get_name(&self) -> String {
+        self.name.clone()
+    }
+
+    pub fn set_name(&mut self, name: String) {
+        self.name = name;
     }
 
     pub fn set_max_height(&mut self, height: f32) {
@@ -562,8 +577,7 @@ impl SVAWindow {
         }
         let (acc, pc, flag, r, p, vm_status, delay) = self.vm_state;
         // window
-        egui::Window::new(&self.id.to_string())
-            .open(&mut true)
+        egui::Window::new(&self.name)
             .max_height(self.max_hight)
             .scroll2(true)
             .show(ctx, |ui| {

@@ -14,6 +14,7 @@ use crate::storage::{
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RamWidow {
     id: usize,
+    name: String,
     /// Is widow open
     pub is_open: bool,
     pub ram: Ram,
@@ -25,6 +26,7 @@ impl RamWidow {
             is_open: true,
             ram: Ram::new().with_id(id).with_size(512),
             id,
+            name: id.to_string(),
         };
         //CustomLogger::log("adding ram window");
         //CustomLogger::log(&format!("{:?}", x));
@@ -43,7 +45,7 @@ impl RamWidow {
     }
 
     pub fn show(&mut self, ctx: &Context, ui: &mut Ui) {
-        egui::Window::new(format!("ram {}", self.id))
+        egui::Window::new(&self.name)
             .open(&mut true)
             .show(ctx, |ui| {
                 let values = self.ram.get_data_ref().clone();

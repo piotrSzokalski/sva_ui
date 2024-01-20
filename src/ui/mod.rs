@@ -5,3 +5,4 @@ pub mod indicator_widget;
 pub mod connection_widget;
 pub mod ram_window;
 pub mod syntax;
+pub mod component_list_widget;
