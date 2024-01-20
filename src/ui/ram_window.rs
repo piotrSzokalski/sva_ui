@@ -1,10 +1,15 @@
 use std::fmt::format;
 
-use egui::{Context, Ui, Color32, Button, Stroke};
-use serde::{Deserialize, Serialize, de::value};
+use egui::{Button, Color32, Context, Stroke, Ui};
+use serde::{de::value, Deserialize, Serialize};
 use simple_virtual_assembler::components::ram::Ram;
 
-use crate::storage::{connections_manager::{ConnectionManager, CONNECTIONS}, custom_logger::CustomLogger, toasts::ToastsManager, modals_manager::{ModalManager, MODAL_INDEX_BUFFER, MODAL_BUFFER_VALUE_I32, RAM_ID}};
+use crate::storage::{
+    connections_manager::{ConnectionManager, CONNECTIONS},
+    custom_logger::CustomLogger,
+    modals_manager::{ModalManager, MODAL_BUFFER_VALUE_I32, MODAL_INDEX_BUFFER, RAM_ID},
+    toasts::ToastsManager,
+};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RamWidow {
@@ -22,7 +27,7 @@ impl RamWidow {
             id,
         };
         //CustomLogger::log("adding ram window");
-       //CustomLogger::log(&format!("{:?}", x));
+        //CustomLogger::log(&format!("{:?}", x));
         x
     }
     pub fn get_id(&self) -> usize {
@@ -43,9 +48,6 @@ impl RamWidow {
             .show(ctx, |ui| {
                 let values = self.ram.get_data_ref().clone();
                 ui.horizontal(|ui| {
-                    
-
-
                     ui.separator();
                     ui.label("index");
 
@@ -57,15 +59,19 @@ impl RamWidow {
                     let mut port_color = Color32::LIGHT_GRAY;
 
                     if ConnectionManager::get_current_id_index().is_some() && !already_connected {
-                        port_color = Color32::YELLOW;
-                    } else if ConnectionManager::in_disconnect_mode() && already_connected  {
+                        let in_dark_mode = ui.style().visuals.dark_mode;
+
+                        port_color = if in_dark_mode {
+                            Color32::YELLOW
+                        } else {
+                            Color32::BLUE
+                        }
+                    } else if ConnectionManager::in_disconnect_mode() && already_connected {
                         port_color = Color32::DARK_RED;
                     }
-    
-                    let index_port_button = Button::new(format!("{}", self.ram.get_index_port())).stroke(Stroke::new(
-                        1.0,
-                        port_color
-                    ));
+
+                    let index_port_button = Button::new(format!("{}", self.ram.get_index_port()))
+                        .stroke(Stroke::new(1.0, port_color));
 
                     if ui.add_enabled(true, index_port_button).clicked() {
                         if let Some(conn_index) = ConnectionManager::get_current_id_index() {
@@ -74,42 +80,38 @@ impl RamWidow {
                                 .unwrap()
                                 .get_mut(conn_index)
                             {
- 
-                                if ! already_connected {
+                                if !already_connected {
                                     let id = format!("R{}:index", self.get_id().clone());
 
-                            
                                     self.ram.connect_index_port(conn);
                                     conn.add_port_id(id);
-                                    
                                 } else {
                                     ToastsManager::show_info(
                                         "Can't connect port that is alredy connected".to_owned(),
                                         10,
                                     )
-                                }                                 
+                                }
                             }
                         } else if ConnectionManager::in_disconnect_mode() {
-                            
                             let conn_id = self.ram.get_index_port().get_conn_id();
                             let conn_index = ConnectionManager::get_connection_index_by_id(conn_id);
-                            if let Some(conn_i) = conn_index { 
+                            if let Some(conn_i) = conn_index {
                                 let mut conns_lock = CONNECTIONS.lock().unwrap();
                                 let conn = conns_lock.get_mut(conn_i);
-                                if let Some(conn_ref) = conn { 
+                                if let Some(conn_ref) = conn {
                                     self.ram.disconnect_index_port();
                                     let id = format!("R{}:index", self.get_id().clone());
                                     conn_ref.remove_port_id(id);
                                 }
                             }
-                        }          
+                        }
                     }
                     if let Some(id) = self.ram.get_index_port().get_conn_id() {
                         if let Some(conn_name) = ConnectionManager::get_name(id) {
                             ui.label(conn_name);
                         }
                     }
-                    
+
                     // ---------------------------------------------------------------------------------------------------------------------
                     ui.separator();
 
@@ -118,19 +120,22 @@ impl RamWidow {
                         simple_virtual_assembler::components::port::Port::Disconnected(_) => false,
                     };
 
-                    let mut port_color = Color32::LIGHT_GRAY;
+                    let mut port_color = Color32::GRAY;
 
                     if ConnectionManager::get_current_id_index().is_some() && !already_connected {
-                        port_color = Color32::YELLOW;
-                    } else if ConnectionManager::in_disconnect_mode() && already_connected  {
+                        let in_dark_mode = ui.style().visuals.dark_mode;
+
+                        port_color = if in_dark_mode {
+                            Color32::YELLOW
+                        } else {
+                            Color32::BLUE
+                        }
+                    } else if ConnectionManager::in_disconnect_mode() && already_connected {
                         port_color = Color32::DARK_RED;
                     }
-    
-                    let data_port_button = Button::new(format!("{}", self.ram.get_data_port())).stroke(Stroke::new(
-                        1.0,
-                        port_color
-                    ));
 
+                    let data_port_button = Button::new(format!("{}", self.ram.get_data_port()))
+                        .stroke(Stroke::new(1.0, port_color));
 
                     ui.label("data");
                     if ui.add_enabled(true, data_port_button).clicked() {
@@ -140,38 +145,32 @@ impl RamWidow {
                                 .unwrap()
                                 .get_mut(conn_index)
                             {
-
-                                if ! already_connected {
+                                if !already_connected {
                                     let id = format!("R{}:data", self.get_id().clone());
 
                                     //self.ram.get_index_port().connect(conn);
                                     self.ram.connect_data_port(conn);
                                     conn.add_port_id(id);
-                                    
                                 } else {
                                     ToastsManager::show_info(
                                         "Can't connect port that is alredy connected".to_owned(),
                                         10,
                                     )
                                 }
-                            
-
-                            
                             }
                         } else if ConnectionManager::in_disconnect_mode() {
-                            
                             let conn_id = self.ram.get_data_port().get_conn_id();
                             let conn_index = ConnectionManager::get_connection_index_by_id(conn_id);
-                            if let Some(conn_i) = conn_index { 
+                            if let Some(conn_i) = conn_index {
                                 let mut conns_lock = CONNECTIONS.lock().unwrap();
                                 let conn = conns_lock.get_mut(conn_i);
-                                if let Some(conn_ref) = conn { 
+                                if let Some(conn_ref) = conn {
                                     self.ram.disconnect_data_port();
                                     let id = format!("R{}:data", self.get_id().clone());
                                     conn_ref.remove_port_id(id);
                                 }
                             }
-                        }          
+                        }
                     }
                     if let Some(id) = self.ram.get_data_port().get_conn_id() {
                         if let Some(conn_name) = ConnectionManager::get_name(id) {
@@ -179,7 +178,6 @@ impl RamWidow {
                         }
                     }
                     // ---------------------------------------------------------------------------------------------------------------------
-
 
                     ui.separator();
                     ui.label("mode");
@@ -192,16 +190,19 @@ impl RamWidow {
                     let mut port_color = Color32::LIGHT_GRAY;
 
                     if ConnectionManager::get_current_id_index().is_some() && !already_connected {
-                        port_color = Color32::YELLOW;
-                    } else if ConnectionManager::in_disconnect_mode() && already_connected  {
+                        let in_dark_mode = ui.style().visuals.dark_mode;
+
+                        port_color = if in_dark_mode {
+                            Color32::YELLOW
+                        } else {
+                            Color32::BLUE
+                        };
+                    } else if ConnectionManager::in_disconnect_mode() && already_connected {
                         port_color = Color32::DARK_RED;
                     }
-    
-                    let data_mode_button = Button::new(format!("{}", self.ram.get_mode_port())).stroke(Stroke::new(
-                        1.0,
-                        port_color
-                    ));
 
+                    let data_mode_button = Button::new(format!("{}", self.ram.get_mode_port()))
+                        .stroke(Stroke::new(1.0, port_color));
 
                     if ui.add_enabled(true, data_mode_button).clicked() {
                         if let Some(conn_index) = ConnectionManager::get_current_id_index() {
@@ -210,36 +211,32 @@ impl RamWidow {
                                 .unwrap()
                                 .get_mut(conn_index)
                             {
-
-                                if ! already_connected {
+                                if !already_connected {
                                     let id = format!("R{}:mode", self.get_id().clone());
 
                                     //self.ram.get_index_port().connect(conn);
                                     self.ram.connect_mode_port(conn);
                                     conn.add_port_id(id);
-                                    
                                 } else {
                                     ToastsManager::show_info(
                                         "Can't connect port that is alredy connected".to_owned(),
                                         10,
                                     )
                                 }
-                            
                             }
                         } else if ConnectionManager::in_disconnect_mode() {
-                            
                             let conn_id = self.ram.get_mode_port().get_conn_id();
                             let conn_index = ConnectionManager::get_connection_index_by_id(conn_id);
-                            if let Some(conn_i) = conn_index { 
+                            if let Some(conn_i) = conn_index {
                                 let mut conns_lock = CONNECTIONS.lock().unwrap();
                                 let conn = conns_lock.get_mut(conn_i);
-                                if let Some(conn_ref) = conn { 
+                                if let Some(conn_ref) = conn {
                                     self.ram.disconnect_mode_port();
                                     let id = format!("R{}:mode", self.get_id().clone());
                                     conn_ref.remove_port_id(id);
                                 }
                             }
-                        }          
+                        }
                     }
                     if let Some(id) = self.ram.get_mode_port().get_conn_id() {
                         if let Some(conn_name) = ConnectionManager::get_name(id) {
@@ -255,17 +252,14 @@ impl RamWidow {
                                 for j in 0..8 {
                                     let index = i * 8 + j;
                                     if ui.button(format!("{}", values[index])).clicked() {
-                                       
                                         ModalManager::set_modal(1);
                                         *RAM_ID.lock().unwrap() = Some(self.get_id());
                                         *MODAL_INDEX_BUFFER.lock().unwrap() = Some(index);
                                         //
                                         // if let Some(new_value) =  *MODAL_BUFFER_VALUE_I32.lock().unwrap() {
                                         //     CustomLogger::log(&format!("setting ram at index:{} to value : {}", index, new_value));
-                                            
-                                        // }
-                                        
 
+                                        // }
                                     };
                                 }
                             });

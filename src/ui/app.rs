@@ -669,7 +669,7 @@ impl eframe::App for SvaUI {
         // Central panel
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.separator();
+            
 
             // vms
             for index in 0..self.vms.len() {

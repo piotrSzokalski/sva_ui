@@ -253,10 +253,16 @@ impl SVAWindow {
                     Port::Disconnected(_) => false,
                 };
 
-                let mut port_color = Color32::LIGHT_GRAY;
+                let mut port_color = Color32::GRAY;
 
                 if ConnectionManager::get_current_id_index().is_some() && !port_is_connected {
-                    port_color = Color32::YELLOW;
+                    let in_dark_mode = ui.style().visuals.dark_mode;
+
+                    port_color = if in_dark_mode {
+                        Color32::YELLOW
+                    } else {
+                        Color32::BLUE
+                    }
                 } else if ConnectionManager::in_disconnect_mode() && port_is_connected {
                     port_color = Color32::DARK_RED;
                 }
@@ -276,7 +282,6 @@ impl SVAWindow {
                                 if !port_is_connected {
                                     let id = self.id.to_string() + "P" + &index.to_string();
 
-                                   
                                     {
                                         let lock = self.vm.lock();
                                         match lock {
@@ -301,7 +306,6 @@ impl SVAWindow {
                                 let mut conns_lock = CONNECTIONS.lock().unwrap();
                                 let conn = conns_lock.get_mut(conn_i);
                                 if let Some(conn_ref) = conn {
-                                   
                                     {
                                         let lock = self.vm.lock();
                                         match lock {
@@ -363,6 +367,12 @@ impl SVAWindow {
     }
 
     fn show_code_editor(&mut self, ui: &mut Ui) {
+        let in_dark_mode = ui.style().visuals.dark_mode;
+        let editor_them = if in_dark_mode {
+            ColorTheme::GITHUB_DARK
+        } else {
+            ColorTheme::GITHUB_LIGHT
+        };
         let id = ui.make_persistent_id("Vm code heder");
         egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, false)
             .show_header(ui, |ui| {
@@ -377,7 +387,7 @@ impl SVAWindow {
                             .id_source("code editor")
                             .with_rows(12)
                             .with_fontsize(14.0)
-                            .with_theme(ColorTheme::GITHUB_DARK)
+                            .with_theme(editor_them)
                             .with_syntax(sva_syntax())
                             .with_numlines(true)
                             .show(ui, &mut self.code);
@@ -388,7 +398,7 @@ impl SVAWindow {
             });
     }
 
-    fn show_vm_controll_buttons(&mut self, ui: &mut Ui, vm_status: VmStatus) {
+    fn show_vm_control_buttons(&mut self, ui: &mut Ui, vm_status: VmStatus) {
         let mut poison_err = false;
         ui.separator();
         if let Some(parsing_error) = &self.parsing_error {
@@ -554,22 +564,18 @@ impl SVAWindow {
         // window
         egui::Window::new(&self.id.to_string())
             .open(&mut true)
+            .max_height(self.max_hight)
+            .scroll2(true)
             .show(ctx, |ui| {
-                egui::ScrollArea::vertical()
-                    .max_height(self.max_hight)
-                    .show(ui, |ui| {
-                        // setting vm delay
+                self.show_code_editor(ui);
 
-                        self.show_code_editor(ui);
+                self.show_vm_control_buttons(ui, vm_status);
 
-                        self.show_vm_controll_buttons(ui, vm_status);
+                self.show_registers(ui, acc, ctx, pc, flag, r);
 
-                        self.show_registers(ui, acc, ctx, pc, flag, r);
+                self.show_ports(ui);
 
-                        self.show_ports(ui);
-
-                        self.show_stack(ctx, ui);
-                    });
+                self.show_stack(ctx, ui);
 
                 if self.delay_ms > 10 {
                     ctx.request_repaint_after(Duration::from_millis(self.delay_ms));
