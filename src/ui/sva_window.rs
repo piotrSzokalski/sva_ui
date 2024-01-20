@@ -276,7 +276,7 @@ impl SVAWindow {
                                 if !port_is_connected {
                                     let id = self.id.to_string() + "P" + &index.to_string();
 
-                                    //  self.vm.lock().unwrap().connect_with_id(index, conn, id);
+                                   
                                     {
                                         let lock = self.vm.lock();
                                         match lock {
@@ -301,7 +301,7 @@ impl SVAWindow {
                                 let mut conns_lock = CONNECTIONS.lock().unwrap();
                                 let conn = conns_lock.get_mut(conn_i);
                                 if let Some(conn_ref) = conn {
-                                    //self.vm.lock().unwrap().disconnect(index);
+                                   
                                     {
                                         let lock = self.vm.lock();
                                         match lock {
@@ -389,6 +389,7 @@ impl SVAWindow {
     }
 
     fn show_vm_controll_buttons(&mut self, ui: &mut Ui, vm_status: VmStatus) {
+        let mut poison_err = false;
         ui.separator();
         if let Some(parsing_error) = &self.parsing_error {
             ui.label(
@@ -424,10 +425,18 @@ impl SVAWindow {
 
                 if ui.button(&self.control_button_text).clicked() {
                     {
-                        self.vm
-                            .lock()
-                            .unwrap()
-                            .set_delay(self.delay_ms.try_into().unwrap());
+                        {
+                            let vm_lock = self.vm.lock();
+                            match vm_lock {
+                                Ok(mut vm) => {
+                                    vm.set_delay(self.delay_ms.try_into().unwrap());
+                                }
+                                Err(_) => poison_err = true,
+                            }
+                        }
+                        if poison_err {
+                            self.handle_poison_error();
+                        }
                     }
                     match vm_status {
                         VmStatus::Initial => {
@@ -449,18 +458,15 @@ impl SVAWindow {
                     self.step();
                 }
                 if ui.button(t!("sva_shell.button.reset")).clicked() {
-                    self.vm.lock().unwrap().clear_registers();
-                    match self.vm.lock() {
-                        Ok(mut vm) => {
-                            vm.clear_registers();
+                    {
+                        let vm_lock = self.vm.lock();
+                        match vm_lock {
+                            Ok(mut vm) => vm.clear_registers(),
+                            Err(_err) => poison_err = true,
                         }
-                        Err(err) => {
-                            TOASTS
-                                .lock()
-                                .unwrap()
-                                .error("could clear register")
-                                .set_duration(Some(Duration::from_secs(5)));
-                        }
+                    }
+                    if poison_err {
+                        self.handle_poison_error();
                     }
                 }
                 ui.separator();
