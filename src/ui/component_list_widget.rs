@@ -45,7 +45,8 @@ impl ComponentListWidget {
         ui.vertical(|ui| {
             ui.heading(&self.name);
             ui.separator();
-            if ui.button("show/hide").clicked() {
+            let show_hide_button_text = if self.is_active { "hide" } else { "show" };
+            if ui.button(show_hide_button_text).clicked() {
                 action = if self.is_vm {
                     ComponentAction::ToggleVmVisibility(self.id)
                 } else {

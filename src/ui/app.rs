@@ -607,11 +607,12 @@ impl SvaUI {
                     ScrollArea::new(true).show(ui, |ui| {
                         for vm in &self.vms {
                             let id = vm.get_id();
+                            let is_active = *self.active_vms.get(&id).unwrap_or(&false);
                             actions.push(
                                 ComponentListWidget::new(
                                     id,
                                     vm.get_name(),
-                                    true,
+                                    is_active,
                                     None,
                                     true,
                                     vm.has_stack(),
@@ -623,11 +624,13 @@ impl SvaUI {
                 });
                 ui.collapsing("RAMs", |ui| {
                     for ram in &self.rams {
+                        let id = ram.get_id();
+                        let is_active = *self.active_rams.get(&id).unwrap_or(&false);
                         actions.push(
                             ComponentListWidget::new(
-                                ram.get_id(),
+                                id,
                                 ram.get_name(),
-                                true,
+                                is_active,
                                 None,
                                 false,
                                 false,
