@@ -656,6 +656,7 @@ impl SvaUI {
                         ComponentAction::RemoveVm(id) => {
                             self.component_change_name_is_ram = Some(false);
                             self.component_change_name_id = Some(id);
+                            self.vms.retain(|vm| vm.get_id() != id);
                         }
                         ComponentAction::ToggleRamVisibility(id) => {
                             if let Some(value) = self.active_rams.get_mut(&id) {
@@ -670,6 +671,7 @@ impl SvaUI {
                         ComponentAction::RemoveRam(id) => {
                             self.component_change_name_is_ram = Some(true);
                             self.component_change_name_id = Some(id);
+                            self.rams.retain(|ram| ram.get_id() != id);
                         }
                     }
                 }
