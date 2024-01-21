@@ -6,9 +6,9 @@ use simple_virtual_assembler::components::connection::Connection;
 
 use crate::storage::{
     connections_manager::{
-        ConnectionManager, CONNECTIONS, CURRENT_CONN_ID_FOR_RENAME, NEW_CONNECTION_NAME_BUFFER,
+        ConnectionManager, CONNECTIONS, CURRENT_CONN_ID_FOR_RENAME, NEW_CONNECTION_NAME_BUFFER, ANOTHER_ID_BUFFER,
     },
-    custom_logger::CustomLogger,
+    custom_logger::CustomLogger, modals_manager::ModalManager,
 };
 
 pub struct ConnectionWidget<'a> {
@@ -74,7 +74,9 @@ impl<'a> ConnectionWidget<'a> {
             }
             if ui.button("remove").clicked() {
                 CustomLogger::log("remove conn clicked");
-                ConnectionManager::remove_connection(id);
+                *ANOTHER_ID_BUFFER.lock().unwrap() = id;
+                ModalManager::set_modal(3);
+                //ConnectionManager::remove_connection(id);
             }
         });
         let collapsing_id = ui.make_persistent_id(self.conn.get_id());

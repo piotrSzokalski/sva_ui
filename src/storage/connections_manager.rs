@@ -29,6 +29,10 @@ pub static NEW_CONNECTION_NAME_BUFFER: Lazy<String> = Lazy::new(|| (String::from
 
 pub static RELOAD_CONNECTION: Mutex<bool> = Mutex::new(false);
 
+pub static ANOTHER_ID_BUFFER: Mutex<Option<usize>> = Mutex::new(None);
+
+
+
 pub struct ConnectionManager {}
 
 impl ConnectionManager {

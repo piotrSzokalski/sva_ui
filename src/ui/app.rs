@@ -38,7 +38,8 @@ use wasm_bindgen::prelude::*;
 use web_sys::{js_sys::Array, *};
 
 use crate::storage::connections_manager::{
-    self, ConnectionManager, CONNECTION_NAMES, CURRENT_CONN_ID_FOR_RENAME, RELOAD_CONNECTION,
+    self, ConnectionManager, ANOTHER_ID_BUFFER, CONNECTION_NAMES, CURRENT_CONN_ID_FOR_RENAME,
+    RELOAD_CONNECTION,
 };
 use crate::storage::custom_logger::CustomLogger;
 use crate::storage::modals_manager::{
@@ -57,6 +58,7 @@ enum AreYouSureModalAction {
     Clear,
     RemoveVm,
     RemoveRam,
+    //RemoveConnection
 }
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -536,14 +538,31 @@ impl SvaUI {
 
     fn create_are_you_sure_modal(&mut self, ctx: &Context) {
         let are_yot_sure_modal = Modal::new(ctx, "are you sure modal");
+        let mut conn_id: Option<usize> = None;
+        {
+            conn_id = *ANOTHER_ID_BUFFER.lock().unwrap();
+        }
+        if conn_id.is_some() {
+            let conn_name = ConnectionManager::get_name(conn_id.clone().unwrap());
+            self.are_you_sure_modal_text = format!(
+                "Are you sure you want to remove connect:{}",
+                conn_name.unwrap_or("no name".to_string())
+            );
+        }
         are_yot_sure_modal.show(|ui| {
             ui.heading(&self.are_you_sure_modal_text);
             ui.horizontal(|ui| {
                 if ui.button("No").clicked() {
                     are_yot_sure_modal.close();
                     ModalManager::unset_current_modal();
+                    *ANOTHER_ID_BUFFER.lock().unwrap() = None;
                 }
                 if ui.button("Yes").clicked() {
+                    if conn_id.is_some() {
+                        ConnectionManager::remove_connection(conn_id);
+                        *ANOTHER_ID_BUFFER.lock().unwrap() = None;
+                    }
+
                     match self.are_you_sure_modal_action {
                         AreYouSureModalAction::DoNothing => {}
                         AreYouSureModalAction::Clear => self.clear_file(),
@@ -720,7 +739,7 @@ impl SvaUI {
                             };
                             self.are_you_sure_modal_text =
                                 format!("Are you sure you want to remove vm: {}", name);
-                                self.are_you_sure_modal_action = AreYouSureModalAction::RemoveVm;
+                            self.are_you_sure_modal_action = AreYouSureModalAction::RemoveVm;
                             ModalManager::set_modal(3);
                         }
                         ComponentAction::ToggleRamVisibility(id) => {
@@ -744,7 +763,7 @@ impl SvaUI {
 
                             self.are_you_sure_modal_text =
                                 format!("Are you sure you want to remove ram: {}", name);
-                                self.are_you_sure_modal_action = AreYouSureModalAction::RemoveRam;
+                            self.are_you_sure_modal_action = AreYouSureModalAction::RemoveRam;
                             ModalManager::set_modal(3);
                         }
                     }
