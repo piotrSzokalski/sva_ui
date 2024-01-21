@@ -1,11 +1,11 @@
 use std::borrow::BorrowMut;
 use std::cell::{Ref, RefCell};
 use std::collections::HashMap;
-use std::fs;
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::Duration;
+use std::{default, fs};
 use std::{fmt::Display, fs::File};
 
 use eframe::glow::NONE;
@@ -52,6 +52,12 @@ use super::help_window::HelpWindow;
 use super::ram_window::RamWidow;
 use super::sva_window::SVAWindow;
 
+enum AreYouSureModalAction {
+    DoNothing,
+    Clear,
+    RemoveVm,
+    RemoveRam,
+}
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
@@ -100,6 +106,12 @@ pub struct SvaUI {
     component_change_name_is_ram: Option<bool>,
     component_change_name_id: Option<usize>,
     component_change_name_buffer: String,
+
+    #[serde(skip)]
+    are_you_sure_modal_text: String,
+
+    #[serde(skip)]
+    are_you_sure_modal_action: AreYouSureModalAction,
 }
 
 impl Default for SvaUI {
@@ -135,6 +147,8 @@ impl Default for SvaUI {
             component_change_name_id: None,
             component_change_name_buffer: String::new(),
             active_rams: HashMap::new(),
+            are_you_sure_modal_text: String::new(),
+            are_you_sure_modal_action: AreYouSureModalAction::DoNothing,
         };
         sva_ui
     }
@@ -268,7 +282,6 @@ impl SvaUI {
             Ok(data) => {
                 let file = File::create(path).unwrap();
                 let mut writer = BufWriter::new(file);
-                // Write the data directly, without using serde_json::to_writer
                 writer.write_all(data.as_bytes()).unwrap();
                 writer.flush().unwrap();
             }
@@ -503,20 +516,16 @@ impl SvaUI {
 
             ui.horizontal(|ui| {
                 if ui.button("Cancel").clicked() {
-                    //{ MODAL_TEXT_EDIT_BUFFER.lock().unwrap().clear();}
                     set_ram_value_modal.close();
                     ModalManager::unset_current_modal();
                 }
                 if can_save {
                     if ui.button("Save").clicked() {
-                        //{
                         set_ram_value_modal.close();
                         ModalManager::unset_current_modal();
                         let x = MODAL_BUFFER_VALUE_I32.lock().unwrap().unwrap();
                         let y = MODAL_INDEX_BUFFER.lock().unwrap().unwrap();
                         self.set_ram_value(x, y);
-                        //}
-                        // MODAL_TEXT_EDIT_BUFFER.lock().unwrap().clear();
                     }
                 }
             });
@@ -525,14 +534,62 @@ impl SvaUI {
         ModalManager::add_modal(1, set_ram_value_modal);
     }
 
+    fn create_are_you_sure_modal(&mut self, ctx: &Context) {
+        let are_yot_sure_modal = Modal::new(ctx, "are you sure modal");
+        are_yot_sure_modal.show(|ui| {
+            ui.heading(&self.are_you_sure_modal_text);
+            ui.horizontal(|ui| {
+                if ui.button("No").clicked() {
+                    are_yot_sure_modal.close();
+                    ModalManager::unset_current_modal();
+                }
+                if ui.button("Yes").clicked() {
+                    match self.are_you_sure_modal_action {
+                        AreYouSureModalAction::DoNothing => {}
+                        AreYouSureModalAction::Clear => self.clear_file(),
+                        AreYouSureModalAction::RemoveVm => {
+                            self.remove_vm(self.component_change_name_id)
+                        }
+                        AreYouSureModalAction::RemoveRam => {
+                            self.remove_ram(self.component_change_name_id)
+                        }
+                    }
+                    are_yot_sure_modal.close();
+                    ModalManager::unset_current_modal();
+                }
+            });
+        });
+        ModalManager::add_modal(3, are_yot_sure_modal);
+    }
+
+    pub fn remove_vm(&mut self, id: Option<usize>) {
+        if let Some(id) = id {
+            self.vms.retain(|vm| vm.get_id() != id);
+        }
+    }
+
+    pub fn remove_ram(&mut self, id: Option<usize>) {
+        if let Some(id) = id {
+            self.rams.retain(|ram| ram.get_id() != id);
+        }
+    }
+
+    pub fn clear_file(&mut self) {
+        self.vms.clear();
+        self.rams.clear();
+
+        ConnectionManager::clear_connections();
+    }
+
     fn show_file_menu(&mut self, ui: &mut Ui) {
         ui.menu_button(format!("\u{1F4C1} {}", t!("menu.file")), |ui| {
             // clear button
             if ui.button(t!("button.clear")).clicked() {
-                self.vms.clear();
-                self.rams.clear();
+                self.are_you_sure_modal_action = AreYouSureModalAction::Clear;
+                self.are_you_sure_modal_text =
+                    "Are you sure you want to delete clear file".to_owned();
 
-                ConnectionManager::clear_connections();
+                ModalManager::set_modal(3);
             }
             // import button
             if ui.button(t!("menu.file.import")).clicked() {
@@ -656,7 +713,15 @@ impl SvaUI {
                         ComponentAction::RemoveVm(id) => {
                             self.component_change_name_is_ram = Some(false);
                             self.component_change_name_id = Some(id);
-                            self.vms.retain(|vm| vm.get_id() != id);
+
+                            let name = match self.vms.iter().find(|vm| vm.get_id() == id) {
+                                Some(vm) => vm.get_name(),
+                                None => "None".to_owned(),
+                            };
+                            self.are_you_sure_modal_text =
+                                format!("Are you sure you want to remove vm: {}", name);
+                                self.are_you_sure_modal_action = AreYouSureModalAction::RemoveVm;
+                            ModalManager::set_modal(3);
                         }
                         ComponentAction::ToggleRamVisibility(id) => {
                             if let Some(value) = self.active_rams.get_mut(&id) {
@@ -671,7 +736,16 @@ impl SvaUI {
                         ComponentAction::RemoveRam(id) => {
                             self.component_change_name_is_ram = Some(true);
                             self.component_change_name_id = Some(id);
-                            self.rams.retain(|ram| ram.get_id() != id);
+
+                            let name = match self.rams.iter().find(|ram| ram.get_id() == id) {
+                                Some(vm) => vm.get_name(),
+                                None => "None".to_owned(),
+                            };
+
+                            self.are_you_sure_modal_text =
+                                format!("Are you sure you want to remove ram: {}", name);
+                                self.are_you_sure_modal_action = AreYouSureModalAction::RemoveRam;
+                            ModalManager::set_modal(3);
                         }
                     }
                 }
@@ -756,6 +830,7 @@ impl eframe::App for SvaUI {
 
         self.create_ram_value_setter_modal(ctx);
         self.crate_component_change_name_modal(ctx);
+        self.create_are_you_sure_modal(ctx);
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             egui::ScrollArea::horizontal().show(ui, |ui| {
