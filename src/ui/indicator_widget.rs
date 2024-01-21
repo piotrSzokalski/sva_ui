@@ -1,9 +1,10 @@
 use egui::{Context, Ui, Widget};
+use serde::{Serialize, Deserialize};
 
 
 
-#[derive(Debug, Clone, Copy)]
-enum ValueFormat {
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum ValueFormat {
     Dec,
     Bin,
     Hex,

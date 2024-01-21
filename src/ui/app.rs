@@ -674,10 +674,11 @@ impl SvaUI {
     fn show_components_side_panel(&mut self, ctx: &Context) {
         egui::SidePanel::right("components_panel")
             .resizable(true)
+            .min_width(100.0)
             .show(ctx, |ui| {
                 let mut actions = vec![ComponentAction::DoNothing];
                 ui.heading("Components");
-                ui.label(format!("{:?}", actions));
+                
 
                 ui.collapsing("VMs", |ui| {
                     ScrollArea::new(true).show(ui, |ui| {

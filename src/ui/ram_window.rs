@@ -11,6 +11,8 @@ use crate::storage::{
     toasts::ToastsManager,
 };
 
+use super::indicator_widget::ValueFormat;
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RamWidow {
     id: usize,
@@ -18,6 +20,7 @@ pub struct RamWidow {
     /// Is widow open
     pub is_open: bool,
     pub ram: Ram,
+    format: ValueFormat,
 }
 
 impl RamWidow {
@@ -27,9 +30,8 @@ impl RamWidow {
             ram: Ram::new().with_id(id).with_size(512),
             id,
             name: format!("ram:{}", id),
+            format: Default::default(),
         };
-        //CustomLogger::log("adding ram window");
-        //CustomLogger::log(&format!("{:?}", x));
         x
     }
     pub fn get_id(&self) -> usize {
@@ -43,9 +45,22 @@ impl RamWidow {
         self.name = name;
     }
 
-    /// Toggle weather help widows is open or closed
-    pub fn toggle_open_close(&mut self) {
-        self.is_open = !self.is_open;
+    pub fn format_value(&mut self, value: i32) -> String {
+        match self.format {
+            ValueFormat::Dec => format!("{}", value),
+            ValueFormat::Hex => format!("0b{:b}", value),
+            ValueFormat::Bin => format!("0X{:X}", value),
+            ValueFormat::Unicode => {
+                if value < 0 {
+                    return "Invalid Char".to_owned();
+                } else {
+                    if let Some(char) = char::from_u32(value as u32) {
+                        return format!("\'{}\'", char);
+                    }
+                    return "Invalid Char".to_owned();
+                }
+            }
+        }
     }
 
     pub fn refresh(&mut self) {
@@ -256,20 +271,29 @@ impl RamWidow {
                 });
                 ui.separator();
                 ui.collapsing("values", |ui| {
+                    ui.horizontal(|ui| {
+                        if ui.button("zero values").clicked() {
+                            self.ram.zero_data();
+                        }
+                        egui::ComboBox::from_label("format")
+                            .selected_text(format!("{:?}", self.format))
+                            .show_ui(ui, |ui| {
+                                ui.selectable_value(&mut self.format, ValueFormat::Dec, "Decimal");
+                                ui.selectable_value(&mut self.format, ValueFormat::Bin, "Binary");
+                                ui.selectable_value(&mut self.format, ValueFormat::Hex, "Hexadecimal");
+                                ui.selectable_value(&mut self.format, ValueFormat::Unicode, "Unicode");
+                            });
+                    });
+                    ui.separator();
                     egui::ScrollArea::new(true).show(ui, |ui| {
                         for i in 0..(512 / 8) {
                             ui.horizontal(|ui| {
                                 for j in 0..8 {
                                     let index = i * 8 + j;
-                                    if ui.button(format!("{}", values[index])).clicked() {
+                                    if ui.button(self.format_value(values[index])).clicked() {
                                         ModalManager::set_modal(1);
                                         *RAM_ID.lock().unwrap() = Some(self.get_id());
                                         *MODAL_INDEX_BUFFER.lock().unwrap() = Some(index);
-                                        //
-                                        // if let Some(new_value) =  *MODAL_BUFFER_VALUE_I32.lock().unwrap() {
-                                        //     CustomLogger::log(&format!("setting ram at index:{} to value : {}", index, new_value));
-
-                                        // }
                                     };
                                 }
                             });
