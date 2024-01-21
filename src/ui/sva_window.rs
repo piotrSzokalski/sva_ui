@@ -74,7 +74,7 @@ pub struct SVAWindow {
     ///Delay ms
     delay_ms: u64,
 
-    vm_state: (i32, usize, Flag, [i32; 4], [i32; 4], VmStatus, u32),
+    vm_state: (i32, usize, Flag, [i32; 4], [i32; 6], VmStatus, u32),
 
     #[serde(skip)]
     indicators: [IndicatorWidget; 13],
@@ -114,7 +114,7 @@ impl Default for SVAWindow {
 
             delay_ms: 1000,
 
-            vm_state: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
+            vm_state: (0, 0, Flag::EQUAL, [0; 4], [0; 6], VmStatus::Initial, 0),
 
             indicators: [
                 IndicatorWidget::new("acc".to_owned()),
@@ -163,7 +163,7 @@ impl SVAWindow {
 
             delay_ms: 1000,
 
-            vm_state: (0, 0, Flag::EQUAL, [0; 4], [0; 4], VmStatus::Initial, 0),
+            vm_state: (0, 0, Flag::EQUAL, [0; 4], [0; 6], VmStatus::Initial, 0),
 
             indicators: Default::default(),
             conn_ids: [None; 4],
@@ -246,7 +246,7 @@ impl SVAWindow {
     fn show_ports(&mut self, ui: &mut Ui) {
         let mut poison_error = false;
         ui.vertical(|ui| {
-            let mut ports = [Port::new(0), Port::new(0), Port::new(0), Port::new(0)];
+            let mut ports = [Port::new(0), Port::new(0), Port::new(0), Port::new(0), Port::new(0), Port::new(0)];
 
             {
                 match self.vm.lock() {
@@ -339,7 +339,7 @@ impl SVAWindow {
                         }
                     }
 
-                    if index < 4 {
+                    if index < 5 {
                         index += 1;
                     }
 
