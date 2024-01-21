@@ -18,15 +18,9 @@ use egui_file::FileDialog;
 use egui_modal::Modal;
 use env_logger::Logger;
 use serde::de::value;
-use simple_virtual_assembler::assembler::parsing_err::ParsingError;
-use simple_virtual_assembler::components::connection;
-use simple_virtual_assembler::vm::instruction::Instruction;
-use simple_virtual_assembler::vm::virtual_machine::VirtualMachine;
-use simple_virtual_assembler::{
-    assembler::assembler::Assembler, components::connection::Connection,
-};
+use simple_virtual_assembler::components::connection::Connection;
 
-use egui_notify::{Toast, Toasts};
+use egui_notify::Toasts;
 
 use simple_virtual_assembler::language::Language;
 
@@ -64,16 +58,13 @@ enum AreYouSureModalAction {
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct SvaUI {
+    //#[serde(skip)]
     language: Language,
 
     vms: Vec<SVAWindow>,
 
     ui_scale: f32,
     help_widow: HelpWindow,
-
-    /// Custom logger
-    #[serde(skip)]
-    logger: CustomLogger,
 
     debug_mode: bool,
 
@@ -120,8 +111,6 @@ impl Default for SvaUI {
     fn default() -> Self {
         rust_i18n::set_locale("en");
         let sva_ui = Self {
-            // Example stuff:
-            // vm_shell: SVAShell::new(0, "First VM window".to_string()),
             language: Language::En,
             vms: Vec::new(),
 
@@ -131,7 +120,6 @@ impl Default for SvaUI {
                 language: Language::En,
             },
 
-            logger: CustomLogger::new(),
             debug_mode: false,
             opened_file: None,
             open_file_dialog: None,
@@ -166,16 +154,15 @@ impl SvaUI {
         // Note that you must enable the `persistence` feature for this to work.
         //rust_i18n::set_locale("en");
         if let Some(storage) = cc.storage {
-            let mut sav_ui: SvaUI = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
-            sav_ui.set_connections_and_their_names();
-            sav_ui.reconnect_vm_ports();
-            sav_ui.reconnect_ram_ports();
-            sav_ui.logger = CustomLogger::new();
+            let mut sva_ui: SvaUI = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
+            sva_ui.set_connections_and_their_names();
+            sva_ui.reconnect_vm_ports();
+            sva_ui.reconnect_ram_ports();
+            sva_ui.set_language(sva_ui.language.clone());
 
-            return sav_ui;
+            return sva_ui;
         }
         let mut sva_ui: SvaUI = Default::default();
-        sva_ui.logger = CustomLogger::new();
         sva_ui
     }
 
@@ -678,7 +665,6 @@ impl SvaUI {
             .show(ctx, |ui| {
                 let mut actions = vec![ComponentAction::DoNothing];
                 ui.heading("Components");
-                
 
                 ui.collapsing("VMs", |ui| {
                     ScrollArea::new(true).show(ui, |ui| {
@@ -793,11 +779,8 @@ impl SvaUI {
                         ConnectionManager::set_current_id(None);
                     }
                 });
-                ui.separator();
 
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    ui.separator();
-
                     let conns = ConnectionManager::get_connections().lock().unwrap().clone();
                     for mut c in conns {
                         ConnectionWidget::new(c, &mut self.change_conn_name_modal_open)
