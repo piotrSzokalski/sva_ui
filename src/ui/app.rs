@@ -183,6 +183,7 @@ impl SvaUI {
                 self.help_widow.set_language(Language::Pl);
             }
         }
+        self.help_widow.set_language(language);
     }
 
     fn disconnect_vm_ports(&mut self) {

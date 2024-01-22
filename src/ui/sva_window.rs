@@ -221,20 +221,14 @@ impl SVAWindow {
         }
         ui.collapsing(t!("sva_shell.collapsing_stack"), |ui| {
             egui::ScrollArea::horizontal()
-                .max_width(200.0)
-                .max_height(self.max_hight * 0.75)
+                .max_height(self.max_hight * 0.20)
                 .enable_scrolling(true)
                 .show(ui, |ui| {
                     ui.separator();
                     ui.horizontal(|ui| {
                         let mut indicator_index = 0;
                         for (index, item) in self.stack_data.iter().enumerate().rev() {
-                            //ui.label(format!("{}", item));
-
-                            //let indicator_data = 0;
                             ui.button(&item.to_string());
-                            //println!("{}", index);
-                            //self.stack_indicators[indicator_index].set(*item, "").show(ctx, ui);
                             indicator_index += 1;
                         }
                     });
@@ -246,7 +240,14 @@ impl SVAWindow {
     fn show_ports(&mut self, ui: &mut Ui) {
         let mut poison_error = false;
         ui.vertical(|ui| {
-            let mut ports = [Port::new(0), Port::new(0), Port::new(0), Port::new(0), Port::new(0), Port::new(0)];
+            let mut ports = [
+                Port::new(0),
+                Port::new(0),
+                Port::new(0),
+                Port::new(0),
+                Port::new(0),
+                Port::new(0),
+            ];
 
             {
                 match self.vm.lock() {
@@ -394,9 +395,13 @@ impl SVAWindow {
                 ui.label(t!("sva_shell.code_block"));
             })
             .body(|ui| {
-                egui::ScrollArea::vertical()
-                    .max_height(self.max_hight * 0.7)
-                    .max_width(400.0)
+                let max_height = if self.stack_present {
+                    self.max_hight * 0.35
+                } else {
+                    self.max_hight * 0.4
+                };
+                egui::ScrollArea::neither()
+                    .max_height(max_height)
                     .show(ui, |ui| {
                         let code_editor = CodeEditor::default()
                             .id_source("code editor")
@@ -578,9 +583,9 @@ impl SVAWindow {
         let (acc, pc, flag, r, p, vm_status, delay) = self.vm_state;
         // window
         egui::Window::new(&self.name)
-        .id(egui::Id::new(format!("vm:{}", self.id)))
+            .id(egui::Id::new(format!("vm:{}", self.id)))
             .max_height(self.max_hight)
-            .scroll2(true)
+            .max_width(500.0)
             .show(ctx, |ui| {
                 self.show_code_editor(ui);
 

@@ -191,3 +191,11 @@ button.show:
 button.hide:
   en: hide
   pl: ukryj
+help_window.collapsing.user_interface:
+  en: user interface
+  pl: interface użytkownika 
+help_window.collapsing.vm_explanation:
+  en: Virtual machine
+  pl: Maszyna wirtualna
+  
+
