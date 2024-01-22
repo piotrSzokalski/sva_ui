@@ -168,7 +168,7 @@ impl SvaUI {
 
     pub fn set_language(&mut self, language: Language) {
         rust_i18n::set_locale(language.string_code());
-        CustomLogger::log("Changing language");
+        //CustomLogger::log("Changing language");
         match language {
             Language::Pl => {
                 self.vms
@@ -205,9 +205,9 @@ impl SvaUI {
 
     fn copy_connections_and_their_names(&mut self) {
         self.connections_copy = ConnectionManager::get_connections().lock().unwrap().clone();
-        CustomLogger::log("Copying connections");
-        CustomLogger::log(&format!("{:?}", self.connections_copy));
-        CustomLogger::log("________________________________________");
+        //CustomLogger::log("Copying connections");
+        //CustomLogger::log(&format!("{:?}", self.connections_copy));
+        //CustomLogger::log("________________________________________");
         self.conn_names_copies = ConnectionManager::get_names();
     }
 
@@ -305,7 +305,7 @@ impl SvaUI {
                 }
             }
             Err(err) => {
-                CustomLogger::log(&format!("Could not open file \n {}", err));
+                //CustomLogger::log(&format!("Could not open file \n {}", err));
                 TOASTS
                     .lock()
                     .unwrap()
@@ -390,15 +390,15 @@ impl SvaUI {
     fn show_connection_name_change_modal(&mut self, ctx: &Context) -> Modal {
         let change_conn_name_modal = Modal::new(ctx, "change_conn_name_modal");
         change_conn_name_modal.show(|ui| {
-            change_conn_name_modal.title(ui, "change name");
+            change_conn_name_modal.title(ui, t!("modal.change_connection_name.title"));
 
             ui.text_edit_singleline(&mut self.new_connection_name_buffer);
             ui.horizontal(|ui| {
-                if ui.button("Cancel").clicked() {
+                if ui.button(t!("button.cancel")).clicked() {
                     self.change_conn_name_modal_open = false;
                     change_conn_name_modal.close();
                 }
-                if ui.button("Save").clicked() {
+                if ui.button(t!("button.save")).clicked() {
                     let id = *CURRENT_CONN_ID_FOR_RENAME.lock().unwrap();
                     ConnectionManager::set_name(id, self.new_connection_name_buffer.clone());
 
@@ -429,7 +429,7 @@ impl SvaUI {
         let res = self.rams.iter_mut().find(|ram| ram.get_id() == id);
         match res {
             Some(ram) => ram.set_name(name),
-            None => ToastsManager::show_err("Could not change name of vm".to_owned(), 10),
+            None => ToastsManager::show_err(t!("error.cant_change_ram_name"), 10),
         }
     }
 
@@ -438,23 +438,23 @@ impl SvaUI {
         match res {
             Some(vm) => {
                 vm.set_name(name);
-                ToastsManager::show_info("vm namge chageed".to_owned(), 5);
             }
-            None => ToastsManager::show_err("Could not change name of vm".to_owned(), 10),
+            None => ToastsManager::show_err(t!("error.cant_change_vm_name"), 10),
         }
     }
 
     fn crate_component_change_name_modal(&mut self, ctx: &Context) {
         let change_component_name_modal = Modal::new(ctx, "change_component_name_modal");
         change_component_name_modal.show(|ui| {
+            change_component_name_modal.title(ui, t!("modal.change_component_name.title"));
             let mut buffer = &mut *MODAL_TEXT_EDIT_BUFFER.lock().unwrap();
             ui.text_edit_singleline(buffer);
             ui.horizontal(|ui| {
-                if ui.button("Cancel").clicked() {
+                if ui.button(t!("button.cancel")).clicked() {
                     change_component_name_modal.close();
                     ModalManager::unset_current_modal();
                 }
-                if ui.button("Save").clicked() {
+                if ui.button(t!("button.save")).clicked() {
                     if self.component_change_name_is_ram == Some(true) {
                         self.change_ram_name(
                             self.component_change_name_id.unwrap(),
@@ -486,7 +486,7 @@ impl SvaUI {
         }
 
         set_ram_value_modal.show(|ui| {
-            set_ram_value_modal.title(ui, "set value");
+            set_ram_value_modal.title(ui, t!("modal.set_ram_value.title"));
             let mut buffer = &mut *MODAL_TEXT_EDIT_BUFFER.lock().unwrap();
 
             ui.text_edit_singleline(buffer);
@@ -504,12 +504,12 @@ impl SvaUI {
             }
 
             ui.horizontal(|ui| {
-                if ui.button("Cancel").clicked() {
+                if ui.button(t!("button.cancel")).clicked() {
                     set_ram_value_modal.close();
                     ModalManager::unset_current_modal();
                 }
                 if can_save {
-                    if ui.button("Save").clicked() {
+                    if ui.button(t!("button.save")).clicked() {
                         set_ram_value_modal.close();
                         ModalManager::unset_current_modal();
                         let x = MODAL_BUFFER_VALUE_I32.lock().unwrap().unwrap();
@@ -532,19 +532,20 @@ impl SvaUI {
         if conn_id.is_some() {
             let conn_name = ConnectionManager::get_name(conn_id.clone().unwrap());
             self.are_you_sure_modal_text = format!(
-                "Are you sure you want to remove connect:{}",
+                "{}:{}",
+                t!("modal.are_you_sure.remove_connection_heading"),
                 conn_name.unwrap_or("no name".to_string())
             );
         }
         are_yot_sure_modal.show(|ui| {
             ui.heading(&self.are_you_sure_modal_text);
             ui.horizontal(|ui| {
-                if ui.button("No").clicked() {
+                if ui.button(t!("button.no")).clicked() {
                     are_yot_sure_modal.close();
                     ModalManager::unset_current_modal();
                     *ANOTHER_ID_BUFFER.lock().unwrap() = None;
                 }
-                if ui.button("Yes").clicked() {
+                if ui.button(t!("button.yes")).clicked() {
                     if conn_id.is_some() {
                         ConnectionManager::remove_connection(conn_id);
                         *ANOTHER_ID_BUFFER.lock().unwrap() = None;
@@ -593,7 +594,7 @@ impl SvaUI {
             if ui.button(t!("button.clear")).clicked() {
                 self.are_you_sure_modal_action = AreYouSureModalAction::Clear;
                 self.are_you_sure_modal_text =
-                    "Are you sure you want to delete clear file".to_owned();
+                    t!("modal.are_you_sure.clear_file_heading");
 
                 ModalManager::set_modal(3);
             }
@@ -636,21 +637,21 @@ impl SvaUI {
         let max_height = 400.0 * (2.25 / self.ui_scale);
         ui.menu_button(t!("button.add"), |ui| {
             // vm
-            if ui.button("vm").clicked() {
+            if ui.button(t!("button.add_vm")).clicked() {
                 let id = self.vms.last().map_or(0, |last| last.get_id() + 1);
                 let mut x = SVAWindow::new(id, false, max_height);
                 self.active_vms.insert(id, true);
                 self.vms.push(x);
             }
             // vm with stack
-            if ui.button("vm with stack").clicked() {
+            if ui.button(t!("button.add_vm_stack")).clicked() {
                 let id = self.vms.last().map_or(0, |last| last.get_id() + 1);
                 let mut x = SVAWindow::new(id, true, max_height);
                 self.active_vms.insert(id, true);
                 self.vms.push(x);
             }
             // ram module
-            if ui.button("ram").clicked() {
+            if ui.button(t!("button.add_ram")).clicked() {
                 let id = self.rams.last().map_or(0, |last| last.get_id() + 1);
                 self.active_rams.insert(id, true);
                 self.rams.push(RamWidow::new(id));
@@ -664,9 +665,9 @@ impl SvaUI {
             .min_width(100.0)
             .show(ctx, |ui| {
                 let mut actions = vec![ComponentAction::DoNothing];
-                ui.heading("Components");
+                ui.heading(t!("side_panel.components.heading"));
 
-                ui.collapsing("VMs", |ui| {
+                ui.collapsing(t!("side_panel.components.collapsing_vms"), |ui| {
                     ScrollArea::new(true).show(ui, |ui| {
                         for vm in &self.vms {
                             let id = vm.get_id();
@@ -685,7 +686,7 @@ impl SvaUI {
                         }
                     });
                 });
-                ui.collapsing("RAMs", |ui| {
+                ui.collapsing(t!("side_panel.components.collapsing_rams"), |ui| {
                     for ram in &self.rams {
                         let id = ram.get_id();
                         let is_active = *self.active_rams.get(&id).unwrap_or(&false);
@@ -725,7 +726,7 @@ impl SvaUI {
                                 None => "None".to_owned(),
                             };
                             self.are_you_sure_modal_text =
-                                format!("Are you sure you want to remove vm: {}", name);
+                                format!("{}: {}", t!("modal.are_you_sure.remove_vm_heading") ,name);
                             self.are_you_sure_modal_action = AreYouSureModalAction::RemoveVm;
                             ModalManager::set_modal(3);
                         }
@@ -749,7 +750,7 @@ impl SvaUI {
                             };
 
                             self.are_you_sure_modal_text =
-                                format!("Are you sure you want to remove ram: {}", name);
+                                format!("{}: {}", t!("modal.are_you_sure.remove_ram_heading") , name);
                             self.are_you_sure_modal_action = AreYouSureModalAction::RemoveRam;
                             ModalManager::set_modal(3);
                         }
@@ -762,20 +763,20 @@ impl SvaUI {
         egui::SidePanel::right("connections_panel")
             .resizable(true)
             .show(ctx, |ui| {
-                ui.heading("Connections");
+                ui.heading(t!("side_panel.connections.heading"));
                 ui.vertical(|ui| {
-                    if ui.button("add").clicked() {
+                    if ui.button(t!("button.add")).clicked() {
                         ConnectionManager::create_connection();
                     }
-                    let mut disconnect_button_text = "disconnect";
+                    let mut disconnect_button_text = t!("button.disconnect.disconnect");
                     if ConnectionManager::in_disconnect_mode() {
-                        disconnect_button_text = "stop disconnecting";
+                        disconnect_button_text = t!("button.disconnect.stop_disconnecting");
                     }
                     if ui.button(disconnect_button_text).clicked() {
                         ConnectionManager::toggle_disconnect_mode();
                     }
 
-                    if ui.button("stop connecting/disconnecting").clicked() {
+                    if ui.button(t!("button.stop_connecting_disconnecting")).clicked() {
                         ConnectionManager::set_current_id(None);
                     }
                 });
@@ -794,7 +795,7 @@ impl SvaUI {
 impl eframe::App for SvaUI {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        CustomLogger::log("auto saving");
+        //CustomLogger::log("auto saving");
         self.copy_connections_and_their_names();
         self.disconnect_vm_ports();
         self.disconnect_ram_ports();
@@ -853,7 +854,7 @@ impl eframe::App for SvaUI {
                         .add(
                             egui::Slider::new(&mut self.ui_scale, 0.75..=2.25)
                                 .step_by(0.25)
-                                .text("ui scale"),
+                                .text(t!("slider.ui.scale")),
                         )
                         .changed()
                     {
@@ -867,23 +868,23 @@ impl eframe::App for SvaUI {
 
                     self.show_component_add_menu(ui);
 
-                    if ui.button(t!("label.help")).clicked() {
+                    if ui.button(t!("button.open_help_window")).clicked() {
                         self.help_widow.toggle_open_close();
                     }
 
-                    if ui.button("Debug").clicked() {
-                        self.debug_mode = !self.debug_mode;
-                    }
+                    // if ui.button("Debug").clicked() {
+                    //     self.debug_mode = !self.debug_mode;
+                    // }
                     if ui
-                        .button("connections")
-                        .on_hover_text("opens panel with connections")
+                        .button(t!("button.open_connection_side_panel"))
+                        .on_hover_text(t!("button.open_connection_side_panel.on_hover_text"))
                         .clicked()
                     {
                         self.connections_panel_visible = !self.connections_panel_visible;
                     }
                     if ui
-                        .button("components")
-                        .on_hover_text("opens panel with components")
+                        .button(t!("button.open_components_side_panel"))
+                        .on_hover_text(t!("button.open_components_side_panel.on_hover_text"))
                         .clicked()
                     {
                         self.components_panel_visible = !self.components_panel_visible;

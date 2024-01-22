@@ -182,7 +182,7 @@ impl SVAWindow {
     }
 
     pub fn handle_poison_error(&mut self) {
-        ToastsManager::show_info(format!("Resting vm {} due to error", self.id), 10);
+        ToastsManager::show_info(format!("{} {} ", t!("error.restarting_vm"), self.id), 10);
         if self.stack_present {
             self.vm = Arc::new(Mutex::new(VirtualMachine::new()));
             self.try_assemble_and_load();
@@ -219,7 +219,7 @@ impl SVAWindow {
         if !self.stack_present {
             return;
         }
-        ui.collapsing("stac", |ui| {
+        ui.collapsing(t!("sva_shell.collapsing_stack"), |ui| {
             egui::ScrollArea::horizontal()
                 .max_width(200.0)
                 .max_height(self.max_hight * 0.75)
@@ -309,7 +309,7 @@ impl SVAWindow {
                                     }
                                 } else {
                                     ToastsManager::show_info(
-                                        "Can't connect port that is already connected".to_owned(),
+                                        t!("toast_info.can_connect_connected_port"),
                                         10,
                                     )
                                 }
@@ -518,7 +518,7 @@ impl SVAWindow {
                 {
                     match self.vm.lock() {
                         Ok(mut vm) => {
-                            CustomLogger::log("Loading program");
+                            //CustomLogger::log("Loading program");
                             vm.load_program(program);
                         }
                         Err(err) => ToastsManager::show_err(format!("{:?}", err), 10),

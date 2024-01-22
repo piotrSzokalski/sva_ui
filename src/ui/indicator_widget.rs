@@ -59,12 +59,12 @@ impl IndicatorWidget {
             ValueFormat::Bin => format!("0X{:X}", self.data),
             ValueFormat::Unicode => {
                 if self.data < 0 {
-                    return "Invalid Char".to_owned();
+                    return t!("common.invalid_char");
                 } else {
                     if let Some(char) = char::from_u32(self.data as u32) {
                         return format!("\'{}\'", char);
                     }
-                    return "Invalid Char".to_owned();
+                    return t!("common.invalid_char");
                 }
             }
         }

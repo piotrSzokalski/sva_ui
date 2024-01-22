@@ -48,16 +48,16 @@ impl RamWidow {
     pub fn format_value(&mut self, value: i32) -> String {
         match self.format {
             ValueFormat::Dec => format!("{}", value),
-            ValueFormat::Hex => format!("0b{:b}", value),
-            ValueFormat::Bin => format!("0X{:X}", value),
+            ValueFormat::Hex => format!("0x{:b}", value),
+            ValueFormat::Bin => format!("0b{:X}", value),
             ValueFormat::Unicode => {
                 if value < 0 {
-                    return "Invalid Char".to_owned();
+                    return t!("common.invalid_char");
                 } else {
                     if let Some(char) = char::from_u32(value as u32) {
                         return format!("\'{}\'", char);
                     }
-                    return "Invalid Char".to_owned();
+                    return t!("common.invalid_char");
                 }
             }
         }
@@ -112,7 +112,7 @@ impl RamWidow {
                                     conn.add_port_id(id);
                                 } else {
                                     ToastsManager::show_info(
-                                        "Can't connect port that is alredy connected".to_owned(),
+                                        t!("toast_info.can_connect_connected_port"),
                                         10,
                                     )
                                 }
@@ -178,7 +178,7 @@ impl RamWidow {
                                     conn.add_port_id(id);
                                 } else {
                                     ToastsManager::show_info(
-                                        "Can't connect port that is alredy connected".to_owned(),
+                                        t!("toast_info.can_connect_connected_port"),
                                         10,
                                     )
                                 }
@@ -244,7 +244,7 @@ impl RamWidow {
                                     conn.add_port_id(id);
                                 } else {
                                     ToastsManager::show_info(
-                                        "Can't connect port that is alredy connected".to_owned(),
+                                        t!("toast_info.can_connect_connected_port"),
                                         10,
                                     )
                                 }
@@ -270,18 +270,18 @@ impl RamWidow {
                     }
                 });
                 ui.separator();
-                ui.collapsing("values", |ui| {
+                ui.collapsing(t!("ram_window.collapsing.values"), |ui| {
                     ui.horizontal(|ui| {
-                        if ui.button("zero values").clicked() {
+                        if ui.button(t!("button.zero_values")).clicked() {
                             self.ram.zero_data();
                         }
                         egui::ComboBox::from_label("format")
                             .selected_text(format!("{:?}", self.format))
                             .show_ui(ui, |ui| {
-                                ui.selectable_value(&mut self.format, ValueFormat::Dec, "Decimal");
-                                ui.selectable_value(&mut self.format, ValueFormat::Bin, "Binary");
-                                ui.selectable_value(&mut self.format, ValueFormat::Hex, "Hexadecimal");
-                                ui.selectable_value(&mut self.format, ValueFormat::Unicode, "Unicode");
+                                ui.selectable_value(&mut self.format, ValueFormat::Dec, t!("ram_window.selectable_value.format.decimal"));
+                                ui.selectable_value(&mut self.format, ValueFormat::Bin, t!("ram_window.selectable_value.format.binary"));
+                                ui.selectable_value(&mut self.format, ValueFormat::Hex, t!("ram_window.selectable_value.format.hexadecimal"));
+                                ui.selectable_value(&mut self.format, ValueFormat::Unicode, t!("ram_window.selectable_value.format.unicode"));
                             });
                     });
                     ui.separator();

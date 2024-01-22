@@ -45,7 +45,7 @@ impl ComponentListWidget {
         ui.vertical(|ui| {
             ui.heading(&self.name);
             ui.separator();
-            let show_hide_button_text = if self.is_active { "hide" } else { "show" };
+            let show_hide_button_text = if self.is_active { t!("button.hide") } else { t!("button.show") };
             if ui.button(show_hide_button_text).clicked() {
                 action = if self.is_vm {
                     ComponentAction::ToggleVmVisibility(self.id)
@@ -53,14 +53,14 @@ impl ComponentListWidget {
                     ComponentAction::ToggleRamVisibility(self.id)
                 }
             }
-            if ui.button("rename").clicked() {
+            if ui.button(t!("button.rename")).clicked() {
                 action = if self.is_vm {
                     ComponentAction::RenameVm(self.id)
                 } else {
                     ComponentAction::RenameRam(self.id)
                 }
             }
-            if ui.button("remove").clicked() {
+            if ui.button(t!("button.remove")).clicked() {
                 action = if self.is_vm {
                     ComponentAction::RemoveVm(self.id)
                 } else {

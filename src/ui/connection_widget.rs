@@ -6,9 +6,11 @@ use simple_virtual_assembler::components::connection::Connection;
 
 use crate::storage::{
     connections_manager::{
-        ConnectionManager, CONNECTIONS, CURRENT_CONN_ID_FOR_RENAME, NEW_CONNECTION_NAME_BUFFER, ANOTHER_ID_BUFFER,
+        ConnectionManager, ANOTHER_ID_BUFFER, CONNECTIONS, CURRENT_CONN_ID_FOR_RENAME,
+        NEW_CONNECTION_NAME_BUFFER,
     },
-    custom_logger::CustomLogger, modals_manager::ModalManager,
+    custom_logger::CustomLogger,
+    modals_manager::ModalManager,
 };
 
 pub struct ConnectionWidget<'a> {
@@ -36,10 +38,10 @@ impl<'a> ConnectionWidget<'a> {
 
         ui.separator();
 
-        let mut button_text = "connect".to_owned();
+        let mut button_text = t!("button.connect.connect");
         let mut color = Color32::GRAY;
         if ConnectionManager::get_current_id() == self.conn.get_id() {
-            button_text = "stop connecting".to_owned();
+            button_text = t!("button.connect.stop_connecting");
             let in_dark_mode = ui.style().visuals.dark_mode;
 
             color = if in_dark_mode {
@@ -63,33 +65,20 @@ impl<'a> ConnectionWidget<'a> {
                 CustomLogger::log(&format!("CONN IDS: {:?} {:?}", current_index, id));
                 if current_index == id {
                     ConnectionManager::set_current_id(None);
-                    CustomLogger::log("HERE");
                 } else {
                     ConnectionManager::set_current_id(id);
                 }
             }
-            if ui.button("rename").clicked() {
+            if ui.button(t!("button.rename")).clicked() {
                 *CURRENT_CONN_ID_FOR_RENAME.lock().unwrap() = id;
                 *self.change_conn_name_modal_open = true;
             }
-            if ui.button("remove").clicked() {
-                CustomLogger::log("remove conn clicked");
+            if ui.button(t!("button.remove")).clicked() {
                 *ANOTHER_ID_BUFFER.lock().unwrap() = id;
                 ModalManager::set_modal(3);
                 //ConnectionManager::remove_connection(id);
             }
         });
         let collapsing_id = ui.make_persistent_id(self.conn.get_id());
-        egui::collapsing_header::CollapsingState::load_with_default_open(
-            ui.ctx(),
-            collapsing_id,
-            false,
-        )
-        .show_header(ui, |ui| {
-            ui.label(t!("ports"));
-        })
-        .body(|ui| {
-            ui.label(format!("{:?}", self.conn));
-        });
     }
 }

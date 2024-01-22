@@ -17,9 +17,90 @@ slider.ui.scale:
 button.clear:
   en: clear
   pl: wyczyść
+button.open_help_window:
+  en: Help
+  pl: Pomoc
+button.open_connection_side_panel:
+  en: connections
+  pl: połączenia
+button.open_connection_side_panel.on_hover_text:
+  en: opens/closes panel with connections
+  pl: otwiera/zamyka panel z połączeniami
+button.open_components_side_panel:
+  en: components
+  pl: komponenty
+button.open_components_side_panel.on_hover_text:
+  en: opens/closes panel with components
+  pl: otwiera/zamyka panel z komponentami 
+modal.change_connection_name.title:
+  en: change connection name
+  pl: zmień nazwe połączenia
+modal.change_component_name.title:
+  en: change name
+  pl: zmień nazwe
+modal.set_ram_value.title:
+  en: set value
+  pl: ustaw wartość
+modal.are_you_sure.remove_connection_heading:
+  en: Are you sure you want to remove connect
+  pl: Czy na pewno chcesz usunąć połączenie 
+modal.are_you_sure.clear_file_heading:
+  en: Are you sure you want to clear file
+  pl: Czy jesteś pewien że chcesz wyczyścić plik
+modal.are_you_sure.remove_vm_heading:
+  en: Are you sure you want to remove vm
+  pl: Czy na pewno chcesz usunąć maszynę wirtualną
+modal.are_you_sure.remove_ram_heading:
+  en: Are you sure you want to remove ram
+  pl: Czy na pewno chcesz usunąć ram
+button.cancel:
+  en: Cancel
+  pl: Anuluj
+button.save:
+  en: Save
+  pl: Zapisz
 button.add:
   en: Add
   pl: Dodaj
+button.yes:
+  en: 'Yes'
+  pl: Tak
+button.no:
+  en: 'No'
+  pl: Nie
+button.add_vm:
+  en: vm
+  pl: maszyna wirtualna
+button.add_vm_stack:
+  en: vm with stack
+  pl: maszyna wirtualna ze stosem
+button.add_ram:
+  en: ram
+  pl: ram
+button.disconnect.disconnect:
+  en: disconnect
+  pl: rozłącz
+button.disconnect.stop_disconnecting:
+  en: stop disconnecting
+  pl: przestań rozłączać
+button.stop_connecting_disconnecting:
+  en: stop connecting/disconnecting
+  pl: przestań połączać/rozłączać
+button.zero_values:
+  en: zero values
+  pl: wyzeruj wartości
+side_panel.components.heading:
+  en: Components
+  pl: Komponenty
+side_panel.components.collapsing_vms:
+  en: VMs
+  pl: VMy
+side_panel.components.collapsing_rams:
+  en: RAMs
+  pl: RAMy
+side_panel.connections.heading:
+  en: Connections
+  pl:
 error.file.cant_open:
   en: Could not open file
   pl: Nie można odtworzyć pliku
@@ -29,6 +110,21 @@ error.import.bad_json:
 error.export.cant_serialize:
   en: Can't save app state
   pl: Nie można zapisać stanu aplikacji
+error.cant_change_ram_name:
+  en: could not change ram name
+  pl: nie udało się zmienić nazwy ram'u
+error.cant_change_vm_name:
+  en: could not change vm name
+  pl: nie udało się zmienić nazwy maszyny wirtualnej
+error.restarting_vm:
+  en: Error, resting vm 
+  pl: Błąd, restartowanie maszyny wirtualnej
+toast_info.can_connect_connected_port:
+  en: Can't connect port that is already connected
+  pl: Nie można połączyć portu który już jest połączany
+sva_shell.collapsing_stack:
+  en: stack
+  pl: sots
 sva_shell.button.start:
   en: Start
   pl: Uruchom
@@ -59,4 +155,39 @@ help_window.collapsing.registers:
 help_window.collapsing.instructions:
   en: Instruction set
   pl: Instrukcje
-
+ram_window.collapsing.values:
+  en: values
+  pl: wartości
+ram_window.selectable_value.format.decimal:
+  en: Decimal
+  pl: Dziesiątkowy
+ram_window.selectable_value.format.binary:
+  en: Binary
+  pl: Binarny
+ram_window.selectable_value.format.hexadecimal:
+  en: Hexadecimal
+  pl: Szesnastkowy
+ram_window.selectable_value.format.unicode:
+  en: Unicode
+  pl: Unicode
+common.invalid_char:
+  en: Invalid Char
+  pl: Nieprawidłowy znak
+button.connect.connect:
+  en: connect
+  pl: połącz
+button.connect.stop_connecting:
+  en: stop connecting
+  pl: przestań łączyć
+button.rename:
+  en: rename
+  pl: zmień nazwę
+button.remove:
+  en: remove
+  pl: usuń
+button.show:
+  en: show
+  pl: pokaż
+button.hide:
+  en: hide
+  pl: ukryj
