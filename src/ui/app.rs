@@ -853,13 +853,13 @@ impl eframe::App for SvaUI {
                     // ui scale slider
                     if ui
                         .add(
-                            egui::Slider::new(&mut self.ui_scale, 0.75..=2.25)
-                                .step_by(0.25)
+                            egui::Slider::new(&mut self.ui_scale, 0.75..=2.0)
+                                .step_by(0.05)
                                 .text(t!("slider.ui.scale")),
                         )
                         .changed()
                     {
-                        let max_height = 400.0 * (2.25 / self.ui_scale);
+                        let max_height = 450.0 * (2.0 / self.ui_scale);
                         for vm in self.vms.iter_mut() {
                             vm.set_max_height(max_height);
                         }

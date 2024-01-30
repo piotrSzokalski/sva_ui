@@ -100,7 +100,7 @@ side_panel.components.collapsing_rams:
   pl: RAMy
 side_panel.connections.heading:
   en: Connections
-  pl:
+  pl: Połączenia
 error.file.cant_open:
   en: Could not open file
   pl: Nie można odtworzyć pliku
@@ -125,6 +125,9 @@ toast_info.can_connect_connected_port:
 sva_shell.collapsing_stack:
   en: stack
   pl: sots
+sva_shell.collapsing_ports:
+  en: ports
+  pl: porty
 sva_shell.button.start:
   en: Start
   pl: Uruchom

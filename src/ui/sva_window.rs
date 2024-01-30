@@ -90,6 +90,8 @@ pub struct SVAWindow {
     max_hight: f32,
     /// determine if window is open, closed windows get deleted
     active: bool,
+
+    ports_collapsed: bool
 }
 
 impl Default for SVAWindow {
@@ -137,6 +139,7 @@ impl Default for SVAWindow {
             stack_indicators,
             max_hight: 1000.0,
             active: true,
+            ports_collapsed: false,
         }
     }
 }
@@ -172,6 +175,7 @@ impl SVAWindow {
             stack_indicators: stack_indicators,
             max_hight,
             active: true,
+            ports_collapsed: false
         };
         if stack_present {
             s.assembler = Assembler::new().with_stack();
@@ -238,120 +242,124 @@ impl SVAWindow {
     }
 
     fn show_ports(&mut self, ui: &mut Ui) {
-        let mut poison_error = false;
-        ui.vertical(|ui| {
-            let mut ports = [
-                Port::new(0),
-                Port::new(0),
-                Port::new(0),
-                Port::new(0),
-                Port::new(0),
-                Port::new(0),
-            ];
+        self.ports_collapsed = ui.collapsing(t!("sva_shell.collapsing_ports"), |ui| {
+            let mut poison_error = false;
+            ui.vertical(|ui| {
+                let mut ports = [
+                    Port::new(0),
+                    Port::new(0),
+                    Port::new(0),
+                    Port::new(0),
+                    Port::new(0),
+                    Port::new(0),
+                ];
 
-            {
-                match self.vm.lock() {
-                    Ok(vm) => {
-                        ports = vm.get_ports();
-                    }
-                    Err(err) => {
-                        poison_error = true;
+                {
+                    match self.vm.lock() {
+                        Ok(vm) => {
+                            ports = vm.get_ports();
+                        }
+                        Err(err) => {
+                            poison_error = true;
+                        }
                     }
                 }
-            }
-            if poison_error {
-                self.handle_poison_error();
-            }
-            let mut index = 0;
-            for mut p in ports {
-                let port_is_connected = match p.clone() {
-                    Port::Connected(_, _) => true,
-                    Port::Disconnected(_) => false,
-                };
-
-                let mut port_color = Color32::GRAY;
-
-                if ConnectionManager::get_current_id_index().is_some() && !port_is_connected {
-                    let in_dark_mode = ui.style().visuals.dark_mode;
-
-                    port_color = if in_dark_mode {
-                        Color32::YELLOW
-                    } else {
-                        Color32::BLUE
-                    }
-                } else if ConnectionManager::in_disconnect_mode() && port_is_connected {
-                    port_color = Color32::DARK_RED;
+                if poison_error {
+                    self.handle_poison_error();
                 }
+                let mut index = 0;
+                for mut p in ports {
+                    let port_is_connected = match p.clone() {
+                        Port::Connected(_, _) => true,
+                        Port::Disconnected(_) => false,
+                    };
 
-                let port_button =
-                    Button::new(format!("{}", p)).stroke(Stroke::new(1.0, port_color));
+                    let mut port_color = Color32::GRAY;
 
-                ui.horizontal(|ui| {
-                    ui.label(format!("p:{}", index));
-                    if ui.add_enabled(true, port_button).clicked() {
-                        if let Some(conn_index) = ConnectionManager::get_current_id_index() {
-                            if let Some(conn) = ConnectionManager::get_connections()
-                                .lock()
-                                .unwrap()
-                                .get_mut(conn_index)
-                            {
-                                if !port_is_connected {
-                                    let id = self.id.to_string() + "P" + &index.to_string();
+                    if ConnectionManager::get_current_id_index().is_some() && !port_is_connected {
+                        let in_dark_mode = ui.style().visuals.dark_mode;
 
-                                    {
-                                        let lock = self.vm.lock();
-                                        match lock {
-                                            Ok(mut vm) => vm.connect_with_id(index, conn, id),
-                                            Err(err) => poison_error = true,
+                        port_color = if in_dark_mode {
+                            Color32::YELLOW
+                        } else {
+                            Color32::BLUE
+                        }
+                    } else if ConnectionManager::in_disconnect_mode() && port_is_connected {
+                        port_color = Color32::DARK_RED;
+                    }
+
+                    let port_button =
+                        Button::new(format!("{}", p)).stroke(Stroke::new(1.0, port_color));
+
+                    ui.horizontal(|ui| {
+                        ui.label(format!("p:{}", index));
+                        if ui.add_enabled(true, port_button).clicked() {
+                            if let Some(conn_index) = ConnectionManager::get_current_id_index() {
+                                if let Some(conn) = ConnectionManager::get_connections()
+                                    .lock()
+                                    .unwrap()
+                                    .get_mut(conn_index)
+                                {
+                                    if !port_is_connected {
+                                        let id = self.id.to_string() + "P" + &index.to_string();
+
+                                        {
+                                            let lock = self.vm.lock();
+                                            match lock {
+                                                Ok(mut vm) => vm.connect_with_id(index, conn, id),
+                                                Err(err) => poison_error = true,
+                                            }
                                         }
+                                        if poison_error {
+                                            self.handle_poison_error();
+                                        }
+                                    } else {
+                                        ToastsManager::show_info(
+                                            t!("toast_info.can_connect_connected_port"),
+                                            10,
+                                        )
                                     }
-                                    if poison_error {
-                                        self.handle_poison_error();
-                                    }
-                                } else {
-                                    ToastsManager::show_info(
-                                        t!("toast_info.can_connect_connected_port"),
-                                        10,
-                                    )
                                 }
-                            }
-                        } else if ConnectionManager::in_disconnect_mode() {
-                            let conn_id = p.get_conn_id();
-                            let conn_index = ConnectionManager::get_connection_index_by_id(conn_id);
-                            if let Some(conn_i) = conn_index {
-                                let mut conns_lock = CONNECTIONS.lock().unwrap();
-                                let conn = conns_lock.get_mut(conn_i);
-                                if let Some(conn_ref) = conn {
-                                    {
-                                        let lock = self.vm.lock();
-                                        match lock {
-                                            Ok(mut vm) => vm.disconnect(index),
-                                            Err(err) => poison_error = true,
+                            } else if ConnectionManager::in_disconnect_mode() {
+                                let conn_id = p.get_conn_id();
+                                let conn_index =
+                                    ConnectionManager::get_connection_index_by_id(conn_id);
+                                if let Some(conn_i) = conn_index {
+                                    let mut conns_lock = CONNECTIONS.lock().unwrap();
+                                    let conn = conns_lock.get_mut(conn_i);
+                                    if let Some(conn_ref) = conn {
+                                        {
+                                            let lock = self.vm.lock();
+                                            match lock {
+                                                Ok(mut vm) => vm.disconnect(index),
+                                                Err(err) => poison_error = true,
+                                            }
+                                            let p_id =
+                                                self.id.to_string() + "P" + &index.to_string();
+                                            CustomLogger::log(&p_id);
+                                            conn_ref.remove_port_id(p_id);
                                         }
-                                        let p_id = self.id.to_string() + "P" + &index.to_string();
-                                        CustomLogger::log(&p_id);
-                                        conn_ref.remove_port_id(p_id);
-                                    }
-                                    if poison_error {
-                                        self.handle_poison_error();
+                                        if poison_error {
+                                            self.handle_poison_error();
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
 
-                    if index < 5 {
-                        index += 1;
-                    }
-
-                    if let Some(id) = p.get_conn_id() {
-                        if let Some(conn_name) = ConnectionManager::get_name(id) {
-                            ui.label(conn_name);
+                        if index < 5 {
+                            index += 1;
                         }
-                    }
-                });
-            }
-        });
+
+                        if let Some(id) = p.get_conn_id() {
+                            if let Some(conn_name) = ConnectionManager::get_name(id) {
+                                ui.label(conn_name);
+                            }
+                        }
+                    });
+                }
+            });
+        }).fully_open();
     }
 
     fn show_registers(
@@ -396,9 +404,9 @@ impl SVAWindow {
             })
             .body(|ui| {
                 let max_height = if self.stack_present {
-                    self.max_hight * 0.35
+                    self.max_hight * 0.30 * ( 1.0 + (1 * !self.ports_collapsed as i32) as f32 )
                 } else {
-                    self.max_hight * 0.4
+                    self.max_hight * 0.4 * ( 1.0 + (1 * !self.ports_collapsed as i32) as f32 )
                 };
                 egui::ScrollArea::neither()
                     .max_height(max_height)
@@ -596,6 +604,9 @@ impl SVAWindow {
                 self.show_ports(ui);
 
                 self.show_stack(ctx, ui);
+
+                // uncomment for debugging
+                //ui.label(self.vm.lock().unwrap().to_string());
 
                 if self.delay_ms > 10 {
                     ctx.request_repaint_after(Duration::from_millis(self.delay_ms));
