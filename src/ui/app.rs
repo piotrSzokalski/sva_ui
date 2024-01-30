@@ -47,6 +47,11 @@ use super::help_window::HelpWindow;
 use super::ram_window::RamWidow;
 use super::sva_window::SVAWindow;
 
+use peak_alloc::PeakAlloc;
+
+#[global_allocator]
+static PEAK_ALLOC: PeakAlloc = PeakAlloc;
+
 enum AreYouSureModalAction {
     DoNothing,
     Clear,
@@ -493,16 +498,41 @@ impl SvaUI {
             ui.text_edit_singleline(buffer);
 
             let mut can_save = false;
-            let res = buffer.parse::<i32>();
-            match res {
-                Ok(v) => {
-                    *MODAL_BUFFER_VALUE_I32.lock().unwrap() = Some(v);
-                    can_save = true;
+            let mut value: Option<i32> = None;
+            match buffer {
+                decimal
+                    if decimal
+                        .chars()
+                        .all(|c| c.is_numeric() || (c == '-' && decimal.starts_with('-'))) =>
+                {
+                    if let Ok(dec) = decimal.parse::<i32>() {
+                        value = Some(dec);
+                        can_save = true;
+                    }
                 }
-                Err(_) => {
-                    *MODAL_BUFFER_VALUE_I32.lock().unwrap() = None;
+                binary if binary.starts_with("0b") => {
+                    if let Ok(binary) = i32::from_str_radix(&binary[2..], 2) {
+                        value = Some(binary);
+                        can_save = true;
+                    }
                 }
-            }
+                hex if hex.starts_with("0x") => {
+                    if let Ok(hex) = i32::from_str_radix(&hex[2..], 16) {
+                        value = Some(hex);
+                        can_save = true;
+                    }
+                }
+                c if c.len() == 3 && c.starts_with('\'') && c.ends_with('\'') => {
+                    if let Some(v) = &c.chars().nth(1) {
+                        value = Some(*v as i32);
+                        can_save = true;
+                    }
+                }
+                _ => {}
+            };
+            if let Some(value) = value {
+                *MODAL_BUFFER_VALUE_I32.lock().unwrap() = Some(value);
+            }      
 
             ui.horizontal(|ui| {
                 if ui.button(t!("button.cancel")).clicked() {
@@ -572,6 +602,10 @@ impl SvaUI {
 
     pub fn remove_vm(&mut self, id: Option<usize>) {
         if let Some(id) = id {
+            self.vms
+                .iter_mut()
+                .find(|vm| vm.get_id() == id)
+                .map(|mut vm| vm.join_vm());
             self.vms.retain(|vm| vm.get_id() != id);
         }
     }
@@ -594,8 +628,7 @@ impl SvaUI {
             // clear button
             if ui.button(t!("button.clear")).clicked() {
                 self.are_you_sure_modal_action = AreYouSureModalAction::Clear;
-                self.are_you_sure_modal_text =
-                    t!("modal.are_you_sure.clear_file_heading");
+                self.are_you_sure_modal_text = t!("modal.are_you_sure.clear_file_heading");
 
                 ModalManager::set_modal(3);
             }
@@ -727,7 +760,7 @@ impl SvaUI {
                                 None => "None".to_owned(),
                             };
                             self.are_you_sure_modal_text =
-                                format!("{}: {}", t!("modal.are_you_sure.remove_vm_heading") ,name);
+                                format!("{}: {}", t!("modal.are_you_sure.remove_vm_heading"), name);
                             self.are_you_sure_modal_action = AreYouSureModalAction::RemoveVm;
                             ModalManager::set_modal(3);
                         }
@@ -750,8 +783,11 @@ impl SvaUI {
                                 None => "None".to_owned(),
                             };
 
-                            self.are_you_sure_modal_text =
-                                format!("{}: {}", t!("modal.are_you_sure.remove_ram_heading") , name);
+                            self.are_you_sure_modal_text = format!(
+                                "{}: {}",
+                                t!("modal.are_you_sure.remove_ram_heading"),
+                                name
+                            );
                             self.are_you_sure_modal_action = AreYouSureModalAction::RemoveRam;
                             ModalManager::set_modal(3);
                         }
@@ -777,7 +813,10 @@ impl SvaUI {
                         ConnectionManager::toggle_disconnect_mode();
                     }
 
-                    if ui.button(t!("button.stop_connecting_disconnecting")).clicked() {
+                    if ui
+                        .button(t!("button.stop_connecting_disconnecting"))
+                        .clicked()
+                    {
                         ConnectionManager::set_current_id(None);
                     }
                 });
@@ -905,7 +944,10 @@ impl eframe::App for SvaUI {
         // Central panel
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-
+            let current_mem = PEAK_ALLOC.peak_usage_as_kb();
+            ui.label(format!("memory used: {} kb", current_mem));
+            let peak_mem = PEAK_ALLOC.peak_usage_as_gb();
+            ui.label(format!("The max amount that was used {}", peak_mem));
             // vms
             for index in 0..self.vms.len() {
                 let vm = &mut self.vms[index];

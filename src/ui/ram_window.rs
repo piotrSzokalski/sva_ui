@@ -48,8 +48,8 @@ impl RamWidow {
     pub fn format_value(&mut self, value: i32) -> String {
         match self.format {
             ValueFormat::Dec => format!("{}", value),
-            ValueFormat::Hex => format!("0x{:b}", value),
-            ValueFormat::Bin => format!("0b{:X}", value),
+            ValueFormat::Hex => format!("0x{:X}", value),
+            ValueFormat::Bin => format!("0b{:b}", value),
             ValueFormat::Unicode => {
                 if value < 0 {
                     return t!("common.invalid_char");

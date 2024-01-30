@@ -13,6 +13,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::MutexGuard;
 use std::sync::PoisonError;
+use std::thread::JoinHandle;
 use std::time::Duration;
 
 use egui::{containers::Window, widgets::Label, Context};
@@ -91,7 +92,11 @@ pub struct SVAWindow {
     /// determine if window is open, closed windows get deleted
     active: bool,
 
-    ports_collapsed: bool
+    ports_collapsed: bool,
+
+    
+    #[serde(skip)]
+    vm_join_handle: Option<JoinHandle<()>>
 }
 
 impl Default for SVAWindow {
@@ -140,6 +145,7 @@ impl Default for SVAWindow {
             max_hight: 1000.0,
             active: true,
             ports_collapsed: false,
+            vm_join_handle: None,
         }
     }
 }
@@ -175,7 +181,8 @@ impl SVAWindow {
             stack_indicators: stack_indicators,
             max_hight,
             active: true,
-            ports_collapsed: false
+            ports_collapsed: false,
+            vm_join_handle: None,
         };
         if stack_present {
             s.assembler = Assembler::new().with_stack();
@@ -195,6 +202,33 @@ impl SVAWindow {
             self.try_assemble_and_load();
         }
     }
+
+
+    pub fn reset_vm(&mut self) {
+        let mut poison_err = false;
+        {
+            let vm_lock = self.vm.lock();
+            match vm_lock {
+                Ok(mut vm) => vm.clear_registers(),
+                Err(_err) => poison_err = true,
+            }
+        }
+        if poison_err {
+            self.handle_poison_error();
+        }
+    }
+
+    pub fn join_vm(&mut self) {
+
+        if let Some(join_handle) = self.vm_join_handle.take() {
+            join_handle.join().unwrap(); 
+        }
+    }
+
+    pub fn halt_vm(&mut self) {
+        VirtualMachine::halt(self.vm.clone());
+    }
+
     pub fn has_stack(&self) -> bool {
         self.stack_present
     }
@@ -478,7 +512,7 @@ impl SVAWindow {
                     }
                     match vm_status {
                         VmStatus::Initial => {
-                            VirtualMachine::start(self.vm.clone());
+                            self.vm_join_handle = Some( VirtualMachine::start(self.vm.clone()));
                         }
                         VmStatus::Running => {
                             VirtualMachine::stop(self.vm.clone());
@@ -488,6 +522,8 @@ impl SVAWindow {
                         }
                         VmStatus::Finished => {
                             VirtualMachine::start(self.vm.clone());
+                            //self.reset_vm();
+                            //VirtualMachine::resume(self.vm.clone());
                         }
                     }
                 }
@@ -496,16 +532,7 @@ impl SVAWindow {
                     self.step();
                 }
                 if ui.button(t!("sva_shell.button.reset")).clicked() {
-                    {
-                        let vm_lock = self.vm.lock();
-                        match vm_lock {
-                            Ok(mut vm) => vm.clear_registers(),
-                            Err(_err) => poison_err = true,
-                        }
-                    }
-                    if poison_err {
-                        self.handle_poison_error();
-                    }
+                    self.reset_vm();
                 }
                 ui.separator();
                 if ui
