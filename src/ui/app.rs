@@ -605,7 +605,7 @@ impl SvaUI {
             self.vms
                 .iter_mut()
                 .find(|vm| vm.get_id() == id)
-                .map(|mut vm| vm.join_vm());
+                .map(|mut vm| vm.halt_vm());
             self.vms.retain(|vm| vm.get_id() != id);
         }
     }
