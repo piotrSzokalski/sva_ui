@@ -670,15 +670,8 @@ impl SvaUI {
     fn show_component_add_menu(&mut self, ui: &mut Ui) {
         let max_height = 400.0 * (2.25 / self.ui_scale);
         ui.menu_button(t!("button.add"), |ui| {
-            // vm
-            if ui.button(t!("button.add_vm")).clicked() {
-                let id = self.vms.last().map_or(0, |last| last.get_id() + 1);
-                let mut x = SVAWindow::new(id, false, max_height);
-                self.active_vms.insert(id, true);
-                self.vms.push(x);
-            }
             // vm with stack
-            if ui.button(t!("button.add_vm_stack")).clicked() {
+            if ui.button(t!("button.add_vm")).clicked() {
                 let id = self.vms.last().map_or(0, |last| last.get_id() + 1);
                 let mut x = SVAWindow::new(id, true, max_height);
                 self.active_vms.insert(id, true);
