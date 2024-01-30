@@ -40,10 +40,24 @@ impl ComponentListWidget {
         }
     }
 
+    pub fn get_status_text(&self)  -> String{
+        if let Some(status) = self.status {
+           match status {
+            VmStatus::Initial => t!("sva.vm_status.initial"),
+            VmStatus::Running => t!("sva.vm_status.running"),
+            VmStatus::Stopped => t!("sva.vm_status.stopped"),
+            VmStatus::Finished => t!("sva.vm_status.finished"),
+        }
+        } else {    
+            return  "".to_owned();
+        }
+    }
+
     pub fn show(&mut self, ctx: &Context, ui: &mut Ui) -> ComponentAction {
         let mut action = ComponentAction::DoNothing;
         ui.vertical(|ui| {
             ui.heading(&self.name);
+            ui.label(self.get_status_text());
             ui.separator();
             let show_hide_button_text = if self.is_active { t!("button.hide") } else { t!("button.show") };
             if ui.button(show_hide_button_text).clicked() {

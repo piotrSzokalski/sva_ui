@@ -96,6 +96,8 @@ pub struct SVAWindow {
 
     #[serde(skip)]
     vm_join_handle: Option<JoinHandle<()>>,
+
+    vm_status: VmStatus
 }
 
 impl Default for SVAWindow {
@@ -145,6 +147,7 @@ impl Default for SVAWindow {
             active: true,
             ports_collapsed: false,
             vm_join_handle: None,
+            vm_status: VmStatus::Initial,
         }
     }
 }
@@ -182,6 +185,7 @@ impl SVAWindow {
             active: true,
             ports_collapsed: false,
             vm_join_handle: None,
+            vm_status: VmStatus::Initial,
         };
         if stack_present {
             s.assembler = Assembler::new().with_stack();
@@ -220,6 +224,10 @@ impl SVAWindow {
         if let Some(join_handle) = self.vm_join_handle.take() {
             join_handle.join().unwrap();
         }
+    }
+    
+    pub fn get_status(&self) -> VmStatus {
+        self.vm_status
     }
 
     pub fn halt_vm(&mut self) {
@@ -637,6 +645,7 @@ impl SVAWindow {
             self.handle_poison_error();
         }
         let (acc, pc, flag, r, p, vm_status, delay) = self.vm_state;
+        self.vm_status = vm_status;
         // window
         egui::Window::new(&self.name)
             .id(egui::Id::new(format!("vm:{}", self.id)))

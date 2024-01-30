@@ -152,6 +152,18 @@ sva_shell.code_block:
 sva_shell.next_instruction:
   en: Next instruction
   pl: Następna instrukcja
+sva.vm_status.initial:
+  en: initial state
+  pl: stan początkowy
+sva.vm_status.running:
+  en: running
+  pl: w trakcie pracy
+sva.vm_status.stopped:
+  en: stopped
+  pl: zatrzymana
+sva.vm_status.finished:
+  en: fished
+  pl: zakończa
 help_window.title:
   en: Help
   pl: Pomoc  

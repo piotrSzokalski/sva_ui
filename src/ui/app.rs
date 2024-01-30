@@ -704,7 +704,7 @@ impl SvaUI {
                                     id,
                                     vm.get_name(),
                                     is_active,
-                                    None,
+                                    Some(vm.get_status()),
                                     true,
                                     vm.has_stack(),
                                 )
