@@ -464,9 +464,8 @@ impl SVAWindow {
     }
 
     fn show_vm_control_buttons(&mut self, ui: &mut Ui, vm_status: VmStatus) {
-        
         let next_instruction = self.vm.lock().unwrap().get_next_instruction();
-        
+
         if let Some(instruction) = next_instruction {
             ui.separator();
             ui.horizontal(|ui| {
@@ -554,7 +553,11 @@ impl SVAWindow {
                 }
                 ui.separator();
                 if ui
-                    .add(egui::Slider::new(&mut self.delay_ms, 0..=5000).text("delay"))
+                    .add(
+                        egui::Slider::new(&mut self.delay_ms, 0..=5000)
+                            .logarithmic(true)
+                            .text("delay"),
+                    )
                     .changed()
                 {
                     self.vm
