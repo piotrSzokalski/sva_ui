@@ -149,6 +149,9 @@ sva_shell.button.step:
 sva_shell.code_block:
   en: Code
   pl: Kod
+sva_shell.next_instruction:
+  en: Next instruction
+  pl: Następna instrukcja
 help_window.title:
   en: Help
   pl: Pomoc  

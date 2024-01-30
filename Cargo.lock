@@ -2493,7 +2493,7 @@ checksum = "d66dc143e6b11c1eddc06d5c423cfc97062865baf299914ab64caa38182078fe"
 [[package]]
 name = "simple_virtual_assembler"
 version = "0.1.0"
-source = "git+https://github.com/piotrSzokalski/simple_virtual_assembler.git?branch=master#fd79c180f6dc07933e629f83b6e5d3b597b87f18"
+source = "git+https://github.com/piotrSzokalski/simple_virtual_assembler.git?branch=master#a94d763e6b31ec73937dcb3f122efb9ef5de7000"
 dependencies = [
  "rust-i18n",
  "serde",
