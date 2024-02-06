@@ -20,8 +20,7 @@ pub fn sva_syntax() -> Syntax {
             "jmp", "JMP", "je", "JE", "jne", "JNE", "jl", "JL", "jg", "JG",
         ]),
         special: BTreeSet::from([
-            "acc", "ACC", "pc", "PC", "r0", "r1", "r2", "r3", "p0", "p1",
-            "p2", "p3", "p4", "p5", 
+            "acc", "ACC", "pc", "PC", "r0", "r1", "r2", "r3", "p0", "p1", "p2", "p3", "p4", "p5",
         ]),
     }
 }

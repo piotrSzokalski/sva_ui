@@ -1,13 +1,9 @@
-
-
 use egui::{Color32, Context, RichText, Ui};
 
 use simple_virtual_assembler::components::connection::Connection;
 
 use crate::storage::{
-    connections_manager::{
-        ConnectionManager, ANOTHER_ID_BUFFER, CURRENT_CONN_ID_FOR_RENAME,
-    },
+    connections_manager::{ConnectionManager, ANOTHER_ID_BUFFER, CURRENT_CONN_ID_FOR_RENAME},
     custom_logger::CustomLogger,
     modals_manager::ModalManager,
 };

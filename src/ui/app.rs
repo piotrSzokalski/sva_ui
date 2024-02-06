@@ -1,22 +1,16 @@
-
-
 use std::collections::HashMap;
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
 
+use std::fs;
+use std::fs::File;
 use std::time::Duration;
-use std::{fs};
-use std::{fs::File};
 
-
-
-use egui::{Context};
+use egui::Context;
 use egui::{ScrollArea, Ui};
-
 
 use egui_file::FileDialog;
 use egui_modal::Modal;
-
 
 use simple_virtual_assembler::components::connection::Connection;
 
@@ -24,12 +18,7 @@ use egui_notify::Toasts;
 
 use simple_virtual_assembler::language::Language;
 
-
-
 use serde_json;
-
-
-
 
 use crate::storage::connections_manager::{
     ConnectionManager, ANOTHER_ID_BUFFER, CONNECTION_NAMES, CURRENT_CONN_ID_FOR_RENAME,

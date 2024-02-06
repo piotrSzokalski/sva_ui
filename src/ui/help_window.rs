@@ -1,8 +1,7 @@
-use egui::{Context};
+use egui::Context;
 use egui::{RichText, ScrollArea, Ui};
 use serde::{Deserialize, Serialize};
-use simple_virtual_assembler::language::{Language};
-
+use simple_virtual_assembler::language::Language;
 
 #[derive(Serialize, Deserialize)]
 pub struct HelpWindow {

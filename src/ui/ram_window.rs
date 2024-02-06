@@ -1,5 +1,3 @@
-
-
 use egui::{Button, Color32, Context, Stroke, Ui};
 use serde::{Deserialize, Serialize};
 use simple_virtual_assembler::components::ram::Ram;
@@ -277,10 +275,26 @@ impl RamWidow {
                         egui::ComboBox::from_label("format")
                             .selected_text(format!("{:?}", self.format))
                             .show_ui(ui, |ui| {
-                                ui.selectable_value(&mut self.format, ValueFormat::Dec, t!("ram_window.selectable_value.format.decimal"));
-                                ui.selectable_value(&mut self.format, ValueFormat::Bin, t!("ram_window.selectable_value.format.binary"));
-                                ui.selectable_value(&mut self.format, ValueFormat::Hex, t!("ram_window.selectable_value.format.hexadecimal"));
-                                ui.selectable_value(&mut self.format, ValueFormat::Unicode, t!("ram_window.selectable_value.format.unicode"));
+                                ui.selectable_value(
+                                    &mut self.format,
+                                    ValueFormat::Dec,
+                                    t!("ram_window.selectable_value.format.decimal"),
+                                );
+                                ui.selectable_value(
+                                    &mut self.format,
+                                    ValueFormat::Bin,
+                                    t!("ram_window.selectable_value.format.binary"),
+                                );
+                                ui.selectable_value(
+                                    &mut self.format,
+                                    ValueFormat::Hex,
+                                    t!("ram_window.selectable_value.format.hexadecimal"),
+                                );
+                                ui.selectable_value(
+                                    &mut self.format,
+                                    ValueFormat::Unicode,
+                                    t!("ram_window.selectable_value.format.unicode"),
+                                );
                             });
                     });
                     ui.separator();

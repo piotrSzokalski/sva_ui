@@ -1,10 +1,9 @@
 use std::{collections::HashMap, sync::Mutex, usize};
 
-
 use egui_modal::Modal;
 use once_cell::sync::Lazy;
 
-use super::{toasts::ToastsManager};
+use super::toasts::ToastsManager;
 
 static MODALS: Lazy<Mutex<HashMap<usize, Modal>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 
@@ -12,8 +11,7 @@ static CURRENT_MODAL_ID: Mutex<Option<usize>> = Mutex::new(None);
 
 pub static MODAL_TEXT_EDIT_BUFFER: Mutex<String> = Mutex::new(String::new());
 
-pub static MODAL_BUFFER_VALUE_I32 : Mutex<Option<i32>> = Mutex::new(None);
-
+pub static MODAL_BUFFER_VALUE_I32: Mutex<Option<i32>> = Mutex::new(None);
 
 pub static MODAL_INDEX_BUFFER: Mutex<Option<usize>> = Mutex::new(None);
 
@@ -56,7 +54,6 @@ impl ModalManager {
     pub fn set_modal(id: usize) {
         if MODALS.lock().unwrap().contains_key(&id) {
             *CURRENT_MODAL_ID.lock().unwrap() = Some(id);
-
         }
     }
 

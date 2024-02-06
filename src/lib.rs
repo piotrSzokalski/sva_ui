@@ -21,9 +21,7 @@ i18n!("locales");
 
 //-------------------------------------------------------
 
-
-
-pub mod ui;
 pub mod storage;
+pub mod ui;
 
 pub use ui::app::SvaUI;

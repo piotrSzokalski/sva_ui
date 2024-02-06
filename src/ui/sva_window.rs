@@ -1,23 +1,18 @@
-
 use egui::Button;
 use egui::Color32;
 use egui::Stroke;
 use simple_virtual_assembler::vm::flag::Flag;
-
-
-
 
 use std::panic;
 
 use std::sync::Arc;
 use std::sync::Mutex;
 
-
 use std::thread::JoinHandle;
 use std::time::Duration;
 
-use egui::{Context};
-use egui::{Ui};
+use egui::Context;
+use egui::Ui;
 
 use simple_virtual_assembler::assembler::parsing_err::ParsingError;
 
@@ -35,7 +30,6 @@ use crate::storage::connections_manager::ConnectionManager;
 use crate::storage::connections_manager::CONNECTIONS;
 use crate::storage::custom_logger::CustomLogger;
 use crate::storage::toasts::ToastsManager;
-
 
 use super::indicator_widget::IndicatorWidget;
 use super::syntax::sva_syntax;

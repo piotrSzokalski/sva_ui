@@ -1,7 +1,5 @@
 use egui::{Context, Ui};
-use serde::{Serialize, Deserialize};
-
-
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum ValueFormat {
@@ -36,7 +34,7 @@ impl IndicatorWidget {
     }
     pub fn set(&mut self, data: i32, label: &str) -> &mut IndicatorWidget {
         self.data = data;
-        self.label= label.to_string();
+        self.label = label.to_string();
         self
     }
     pub fn set_data(&mut self, data: i32) -> &mut IndicatorWidget {

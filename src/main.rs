@@ -2,16 +2,13 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 use backtrace::Backtrace;
 use std::fs::File;
-use std::io::{Write};
+use std::io::Write;
 
 use chrono::{DateTime, Utc};
-
 
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result<()> {
-    
-    
     use sva_ui::storage::custom_logger::CustomLogger;
 
     std::panic::set_hook(Box::new(|panic_info| {
@@ -37,8 +34,8 @@ fn main() -> eframe::Result<()> {
 
         // Save logs to file
         //let logs_path = format!("SVA_logs{}.txt", formatted_datetime);
-        
-       // save_to_file(logs_path, &CustomLogger::get_logs_c().join("\n"));
+
+        // save_to_file(logs_path, &CustomLogger::get_logs_c().join("\n"));
 
         // You can customize this to save the error message to a different file or perform any other action
     }));
@@ -80,7 +77,6 @@ fn main() {
 }
 
 fn save_to_file(path: String, message: &str) {
-   
     if let Ok(mut file) = File::create(path) {
         if let Err(err) = writeln!(file, "{}", message) {
             eprintln!("Failed to write panic log to file: {}", err);
