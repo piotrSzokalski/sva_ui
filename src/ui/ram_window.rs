@@ -22,7 +22,6 @@ pub struct RamWidow {
 
 impl RamWidow {
     pub fn new(id: usize) -> Self {
-        
         Self {
             is_open: true,
             ram: Ram::new().with_id(id).with_size(512),
