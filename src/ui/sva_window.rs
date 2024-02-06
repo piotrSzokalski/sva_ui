@@ -174,7 +174,7 @@ impl SVAWindow {
             conn_ids: [None; 4],
             stack_present,
             stack_data: Vec::new(),
-            stack_indicators: stack_indicators,
+            stack_indicators,
             max_hight,
             active: true,
             ports_collapsed: false,
@@ -455,9 +455,9 @@ impl SVAWindow {
             })
             .body(|ui| {
                 let max_height = if self.stack_present {
-                    self.max_hight * 0.30 * (1.0 + (1 * !self.ports_collapsed as i32) as f32)
+                    self.max_hight * 0.30 * (1.0 + !self.ports_collapsed as i32 as f32)
                 } else {
-                    self.max_hight * 0.4 * (1.0 + (1 * !self.ports_collapsed as i32) as f32)
+                    self.max_hight * 0.4 * (1.0 + !self.ports_collapsed as i32 as f32)
                 };
                 egui::ScrollArea::neither()
                     .max_height(max_height)
@@ -520,10 +520,8 @@ impl SVAWindow {
                     }
                 }
 
-                if vm_status == VmStatus::Running || vm_status == VmStatus::Stopped {
-                    if ui.button(t!("sva_shell.button.halt")).clicked() {
-                        VirtualMachine::halt(self.vm.clone());
-                    }
+                if (vm_status == VmStatus::Running || vm_status == VmStatus::Stopped) && ui.button(t!("sva_shell.button.halt")).clicked() {
+                    VirtualMachine::halt(self.vm.clone());
                 }
 
                 if ui.button(&self.control_button_text).clicked() {

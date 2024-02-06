@@ -104,7 +104,8 @@ pub struct SvaUI {
 impl Default for SvaUI {
     fn default() -> Self {
         rust_i18n::set_locale("en");
-        let sva_ui = Self {
+        
+        Self {
             language: Language::En,
             vms: Vec::new(),
 
@@ -133,8 +134,7 @@ impl Default for SvaUI {
             active_rams: HashMap::new(),
             are_you_sure_modal_text: String::new(),
             are_you_sure_modal_action: AreYouSureModalAction::DoNothing,
-        };
-        sva_ui
+        }
     }
 }
 
@@ -468,8 +468,7 @@ impl SvaUI {
                             self.component_change_name_id.unwrap(),
                             buffer.to_string(),
                         );
-                    } else {
-                    }
+                    } 
                     self.component_change_name_is_ram = None;
                     self.component_change_name_id = None;
                     change_component_name_modal.close();
@@ -536,14 +535,12 @@ impl SvaUI {
                     set_ram_value_modal.close();
                     ModalManager::unset_current_modal();
                 }
-                if can_save {
-                    if ui.button(t!("button.save")).clicked() {
-                        set_ram_value_modal.close();
-                        ModalManager::unset_current_modal();
-                        let x = MODAL_BUFFER_VALUE_I32.lock().unwrap().unwrap();
-                        let y = MODAL_INDEX_BUFFER.lock().unwrap().unwrap();
-                        self.set_ram_value(x, y);
-                    }
+                if can_save && ui.button(t!("button.save")).clicked() {
+                    set_ram_value_modal.close();
+                    ModalManager::unset_current_modal();
+                    let x = MODAL_BUFFER_VALUE_I32.lock().unwrap().unwrap();
+                    let y = MODAL_INDEX_BUFFER.lock().unwrap().unwrap();
+                    self.set_ram_value(x, y);
                 }
             });
         });
@@ -558,7 +555,7 @@ impl SvaUI {
             conn_id = *ANOTHER_ID_BUFFER.lock().unwrap();
         }
         if conn_id.is_some() {
-            let conn_name = ConnectionManager::get_name(conn_id.clone().unwrap());
+            let conn_name = ConnectionManager::get_name(conn_id.unwrap());
             self.are_you_sure_modal_text = format!(
                 "{}:{}",
                 t!("modal.are_you_sure.remove_connection_heading"),
@@ -599,10 +596,9 @@ impl SvaUI {
 
     pub fn remove_vm(&mut self, id: Option<usize>) {
         if let Some(id) = id {
-            self.vms
+            if let Some(vm) = self.vms
                 .iter_mut()
-                .find(|vm| vm.get_id() == id)
-                .map(|vm| vm.halt_vm());
+                .find(|vm| vm.get_id() == id) { vm.halt_vm() }
             self.vms.retain(|vm| vm.get_id() != id);
         }
     }
@@ -851,7 +847,7 @@ impl eframe::App for SvaUI {
         // reconnect connection after removal
         {
             let mut done_reconnecting = false;
-            if *RELOAD_CONNECTION.lock().unwrap() == true {
+            if *RELOAD_CONNECTION.lock().unwrap() {
                 self.disconnect_ram_ports();
                 self.disconnect_vm_ports();
                 self.reconnect_ram_ports();
@@ -905,10 +901,8 @@ impl eframe::App for SvaUI {
                         self.help_widow.toggle_open_close();
                     }
 
-                    if cfg!(debug_assertions) {
-                        if ui.button("Debug").clicked() {
-                            self.debug_window_open = !self.debug_window_open;
-                        }
+                    if cfg!(debug_assertions) && ui.button("Debug").clicked() {
+                        self.debug_window_open = !self.debug_window_open;
                     }
                     if ui
                         .button(t!("button.open_connection_side_panel"))

@@ -2,18 +2,16 @@ use egui::{Context, Ui};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub enum ValueFormat {
+    #[default]
     Dec,
     Bin,
     Hex,
     Unicode,
 }
 
-impl Default for ValueFormat {
-    fn default() -> Self {
-        ValueFormat::Dec
-    }
-}
+
 
 #[derive(Default, Clone)]
 pub struct IndicatorWidget {
@@ -57,12 +55,12 @@ impl IndicatorWidget {
             ValueFormat::Bin => format!("0X{:X}", self.data),
             ValueFormat::Unicode => {
                 if self.data < 0 {
-                    return t!("common.invalid_char");
+                    t!("common.invalid_char")
                 } else {
                     if let Some(char) = char::from_u32(self.data as u32) {
                         return format!("\'{}\'", char);
                     }
-                    return t!("common.invalid_char");
+                    t!("common.invalid_char")
                 }
             }
         }

@@ -10,6 +10,12 @@ pub struct CustomLogger {
     events: Mutex<Vec<String>>,
 }
 
+impl Default for CustomLogger {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CustomLogger {
     pub fn new() -> Self {
         CustomLogger {
@@ -23,7 +29,7 @@ impl CustomLogger {
         self.events
             .lock()
             .unwrap()
-            .push(formatted_datetime + "|" + &event.to_string());
+            .push(formatted_datetime + "|" + event);
     }
 
     pub fn get_logs2(&self) -> MutexGuard<'_, Vec<String>> {
@@ -35,7 +41,7 @@ impl CustomLogger {
         let formatted_datetime = current_datetime.format("%Y-%m-%d %H:%M:%S").to_string();
         let mut lock = LOGGS.lock().unwrap();
 
-        lock.push(formatted_datetime + "|" + &event.to_string());
+        lock.push(formatted_datetime + "|" + event);
         if lock.len() > MAX_LOGS {
             lock.remove(0);
         }

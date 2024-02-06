@@ -22,14 +22,14 @@ pub struct RamWidow {
 
 impl RamWidow {
     pub fn new(id: usize) -> Self {
-        let x = Self {
+        
+        Self {
             is_open: true,
             ram: Ram::new().with_id(id).with_size(512),
             id,
             name: format!("ram:{}", id),
             format: Default::default(),
-        };
-        x
+        }
     }
     pub fn get_id(&self) -> usize {
         self.id
@@ -49,12 +49,12 @@ impl RamWidow {
             ValueFormat::Bin => format!("0b{:b}", value),
             ValueFormat::Unicode => {
                 if value < 0 {
-                    return t!("common.invalid_char");
+                    t!("common.invalid_char")
                 } else {
                     if let Some(char) = char::from_u32(value as u32) {
                         return format!("\'{}\'", char);
                     }
-                    return t!("common.invalid_char");
+                    t!("common.invalid_char")
                 }
             }
         }

@@ -49,7 +49,7 @@ impl ComponentListWidget {
                 VmStatus::Finished => t!("sva.vm_status.finished"),
             }
         } else {
-            return "".to_owned();
+            "".to_owned()
         }
     }
 
