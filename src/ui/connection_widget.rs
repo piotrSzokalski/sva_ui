@@ -50,7 +50,9 @@ impl<'a> ConnectionWidget<'a> {
             ui.horizontal(|ui| {
                 //ui.label(format!("{:?}", id));
                 ui.separator();
-                ui.heading(RichText::new(name).color(color));
+                ui.vertical(|ui| {
+                    ui.heading(RichText::new(name).color(color));
+                });
             });
 
             // it's an index

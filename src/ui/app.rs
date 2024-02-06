@@ -682,6 +682,7 @@ impl SvaUI {
         egui::SidePanel::right("components_panel")
             .resizable(true)
             .min_width(100.0)
+            .max_width(300.0)
             .show(ctx, |ui| {
                 let mut actions = vec![ComponentAction::DoNothing];
                 ui.heading(t!("side_panel.components.heading"));
@@ -705,16 +706,24 @@ impl SvaUI {
                     });
                 });
                 ui.collapsing(t!("side_panel.components.collapsing_rams"), |ui| {
-                    for ram in &self.rams {
-                        let id = ram.get_id();
-                        let is_active = *self.active_rams.get(&id).unwrap_or(&false);
-                        actions.push(
-                            ComponentListWidget::new(id, ram.get_name(), is_active, None, false)
+                    ScrollArea::new(true).show(ui, |ui| {
+                        for ram in &self.rams {
+                            let id = ram.get_id();
+                            let is_active = *self.active_rams.get(&id).unwrap_or(&false);
+                            actions.push(
+                                ComponentListWidget::new(
+                                    id,
+                                    ram.get_name(),
+                                    is_active,
+                                    None,
+                                    false,
+                                )
                                 .show(ctx, ui),
-                        );
-                    }
+                            );
+                        }
+                    });
                 });
-                ScrollArea::new(true).show(ui, |_ui| {});
+
                 for action in actions {
                     match action {
                         ComponentAction::DoNothing => {}
@@ -776,6 +785,8 @@ impl SvaUI {
     fn show_connections_side_panel(&mut self, ctx: &Context) {
         egui::SidePanel::right("connections_panel")
             .resizable(true)
+            .min_width(100.0)
+            .max_width(300.0)
             .show(ctx, |ui| {
                 ui.heading(t!("side_panel.connections.heading"));
                 ui.vertical(|ui| {
