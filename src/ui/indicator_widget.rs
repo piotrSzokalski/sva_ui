@@ -1,8 +1,7 @@
 use egui::{Context, Ui};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Default)]
 pub enum ValueFormat {
     #[default]
     Dec,
@@ -11,13 +10,11 @@ pub enum ValueFormat {
     Unicode,
 }
 
-
-
 #[derive(Default, Clone)]
 pub struct IndicatorWidget {
     data: i32,
     format: ValueFormat,
-    text: String,
+
     label: String,
 }
 
@@ -26,7 +23,7 @@ impl IndicatorWidget {
         Self {
             data: Default::default(),
             format: ValueFormat::Dec,
-            text: Default::default(),
+
             label,
         }
     }

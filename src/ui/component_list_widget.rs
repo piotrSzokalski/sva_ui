@@ -18,7 +18,6 @@ pub struct ComponentListWidget {
     is_active: bool,
     status: Option<VmStatus>,
     is_vm: bool,
-    has_stack: bool,
 }
 
 impl ComponentListWidget {
@@ -28,7 +27,6 @@ impl ComponentListWidget {
         is_active: bool,
         status: Option<VmStatus>,
         is_vm: bool,
-        has_stack: bool,
     ) -> Self {
         ComponentListWidget {
             id,
@@ -36,7 +34,6 @@ impl ComponentListWidget {
             is_active,
             status,
             is_vm,
-            has_stack,
         }
     }
 

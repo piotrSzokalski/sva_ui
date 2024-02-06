@@ -104,7 +104,7 @@ pub struct SvaUI {
 impl Default for SvaUI {
     fn default() -> Self {
         rust_i18n::set_locale("en");
-        
+
         Self {
             language: Language::En,
             vms: Vec::new(),
@@ -468,7 +468,7 @@ impl SvaUI {
                             self.component_change_name_id.unwrap(),
                             buffer.to_string(),
                         );
-                    } 
+                    }
                     self.component_change_name_is_ram = None;
                     self.component_change_name_id = None;
                     change_component_name_modal.close();
@@ -550,7 +550,7 @@ impl SvaUI {
 
     fn create_are_you_sure_modal(&mut self, ctx: &Context) {
         let are_yot_sure_modal = Modal::new(ctx, "are you sure modal");
-        let mut conn_id: Option<usize> = None;
+        let conn_id: Option<usize>;
         {
             conn_id = *ANOTHER_ID_BUFFER.lock().unwrap();
         }
@@ -596,9 +596,9 @@ impl SvaUI {
 
     pub fn remove_vm(&mut self, id: Option<usize>) {
         if let Some(id) = id {
-            if let Some(vm) = self.vms
-                .iter_mut()
-                .find(|vm| vm.get_id() == id) { vm.halt_vm() }
+            if let Some(vm) = self.vms.iter_mut().find(|vm| vm.get_id() == id) {
+                vm.halt_vm()
+            }
             self.vms.retain(|vm| vm.get_id() != id);
         }
     }
@@ -700,7 +700,6 @@ impl SvaUI {
                                     is_active,
                                     Some(vm.get_status()),
                                     true,
-                                    vm.has_stack(),
                                 )
                                 .show(ctx, ui),
                             );
@@ -712,15 +711,8 @@ impl SvaUI {
                         let id = ram.get_id();
                         let is_active = *self.active_rams.get(&id).unwrap_or(&false);
                         actions.push(
-                            ComponentListWidget::new(
-                                id,
-                                ram.get_name(),
-                                is_active,
-                                None,
-                                false,
-                                false,
-                            )
-                            .show(ctx, ui),
+                            ComponentListWidget::new(id, ram.get_name(), is_active, None, false)
+                                .show(ctx, ui),
                         );
                     }
                 });

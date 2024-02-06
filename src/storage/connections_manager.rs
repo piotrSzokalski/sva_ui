@@ -136,7 +136,7 @@ impl ConnectionManager {
     }
 
     pub fn toggle_disconnect_mode() {
-        let mut current = false;
+        let current: bool;
         *CURRENT_CONN_ID.lock().unwrap() = None;
         {
             current = !*DISCONNECT_MODE.lock().unwrap();
@@ -153,7 +153,7 @@ impl ConnectionManager {
     }
 
     pub fn get_connection_by_id(id: Option<usize>) -> Option<&'static mut Connection> {
-        let mut index = None;
+        let index: Option<usize>;
         {
             index = CONNECTIONS
                 .lock()

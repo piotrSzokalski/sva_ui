@@ -79,8 +79,6 @@ pub struct SVAWindow {
     stack_present: bool,
 
     stack_data: Vec<i32>,
-    #[serde(skip)]
-    stack_indicators: Vec<IndicatorWidget>,
 
     max_hight: f32,
     /// determine if window is open, closed windows get deleted
@@ -96,11 +94,6 @@ pub struct SVAWindow {
 
 impl Default for SVAWindow {
     fn default() -> Self {
-        let stack_indicators = (0..32)
-            .collect::<Vec<i32>>()
-            .iter()
-            .map(|_index| IndicatorWidget::new("".to_owned()))
-            .collect();
         Self {
             id: 0,
             name: format!("{}", 0).to_owned(),
@@ -136,7 +129,6 @@ impl Default for SVAWindow {
             conn_ids: [None; 4],
             stack_present: false,
             stack_data: Vec::new(),
-            stack_indicators,
             max_hight: 1000.0,
             active: true,
             ports_collapsed: false,
@@ -148,11 +140,6 @@ impl Default for SVAWindow {
 
 impl SVAWindow {
     pub fn new(id: usize, stack_present: bool, max_hight: f32) -> SVAWindow {
-        let stack_indicators = (0..32)
-            .collect::<Vec<i32>>()
-            .iter()
-            .map(|_index| IndicatorWidget::new("".to_owned()))
-            .collect();
         let mut s = SVAWindow {
             id,
             name: format!("vm:{}", id),
@@ -174,7 +161,6 @@ impl SVAWindow {
             conn_ids: [None; 4],
             stack_present,
             stack_data: Vec::new(),
-            stack_indicators,
             max_hight,
             active: true,
             ports_collapsed: false,
@@ -275,10 +261,10 @@ impl SVAWindow {
                 .show(ui, |ui| {
                     ui.separator();
                     ui.horizontal(|ui| {
-                        let mut indicator_index = 0;
+                        let mut _indicator_index = 0;
                         for (_index, item) in self.stack_data.iter().enumerate().rev() {
-                            ui.button(&item.to_string());
-                            indicator_index += 1;
+                            let _ = ui.button(&item.to_string());
+                            _indicator_index += 1;
                         }
                     });
                     ui.add_space(10.0);
@@ -432,7 +418,7 @@ impl SVAWindow {
 
             // flag
             ui.label("flag");
-            ui.button(flag.to_string());
+            let _ = ui.button(flag.to_string());
 
             self.indicators[2].set(r[0], "r0").show(ctx, ui);
             self.indicators[2].set(r[1], "r1").show(ctx, ui);
@@ -520,7 +506,9 @@ impl SVAWindow {
                     }
                 }
 
-                if (vm_status == VmStatus::Running || vm_status == VmStatus::Stopped) && ui.button(t!("sva_shell.button.halt")).clicked() {
+                if (vm_status == VmStatus::Running || vm_status == VmStatus::Stopped)
+                    && ui.button(t!("sva_shell.button.halt")).clicked()
+                {
                     VirtualMachine::halt(self.vm.clone());
                 }
 
