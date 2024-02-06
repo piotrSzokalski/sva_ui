@@ -267,8 +267,9 @@ impl SvaUI {
         self.copy_connections_and_their_names();
         self.disconnect_vm_ports();
         self.disconnect_ram_ports();
-
+        self.vms.iter_mut().for_each(|vm| vm.stop_vm());
         let serialized_state = serde_json::to_string(&self);
+        self.vms.iter_mut().for_each(|vm| vm.resume_vm());
         self.set_connections_and_their_names();
         self.reconnect_vm_ports();
         self.reconnect_ram_ports();
@@ -833,10 +834,12 @@ impl eframe::App for SvaUI {
         self.copy_connections_and_their_names();
         self.disconnect_vm_ports();
         self.disconnect_ram_ports();
+        self.vms.iter_mut().for_each(|vm| vm.stop_vm());
         eframe::set_value(storage, eframe::APP_KEY, self);
         self.reconnect_ram_ports();
         self.reconnect_vm_ports();
         self.set_connections_and_their_names();
+        self.vms.iter_mut().for_each(|vm| vm.resume_vm());
     }
 
     /// Called each time the UI needs repainting, which may be many times per second.

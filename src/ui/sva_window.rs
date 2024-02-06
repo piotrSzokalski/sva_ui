@@ -97,7 +97,7 @@ pub struct SVAWindow {
     #[serde(skip)]
     vm_join_handle: Option<JoinHandle<()>>,
 
-    vm_status: VmStatus
+    vm_status: VmStatus,
 }
 
 impl Default for SVAWindow {
@@ -225,13 +225,25 @@ impl SVAWindow {
             join_handle.join().unwrap();
         }
     }
-    
+
     pub fn get_status(&self) -> VmStatus {
         self.vm_status
     }
 
     pub fn halt_vm(&mut self) {
         VirtualMachine::halt(self.vm.clone());
+    }
+
+    pub fn stop_vm(&mut self) {
+        VirtualMachine::stop(self.vm.clone());
+    }
+
+    pub fn resume_vm(&mut self) {
+        if self.vm_join_handle.is_some() {
+            VirtualMachine::resume(self.vm.clone());
+        } else {
+            self.vm_join_handle = Some(VirtualMachine::start(self.vm.clone()));
+        }
     }
 
     pub fn has_stack(&self) -> bool {
@@ -543,7 +555,11 @@ impl SVAWindow {
                             VirtualMachine::stop(self.vm.clone());
                         }
                         VmStatus::Stopped => {
-                            VirtualMachine::resume(self.vm.clone());
+                            if self.vm_join_handle.is_some() {
+                                VirtualMachine::resume(self.vm.clone());
+                            } else {
+                                self.vm_join_handle = Some(VirtualMachine::start(self.vm.clone()));
+                            }
                         }
                         VmStatus::Finished => {
                             VirtualMachine::start(self.vm.clone());
