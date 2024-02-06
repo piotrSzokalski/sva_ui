@@ -1,13 +1,12 @@
-use std::fmt::format;
+
 
 use egui::{Button, Color32, Context, Stroke, Ui};
-use serde::{de::value, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use simple_virtual_assembler::components::ram::Ram;
 
 use crate::storage::{
     connections_manager::{ConnectionManager, CONNECTIONS},
-    custom_logger::CustomLogger,
-    modals_manager::{ModalManager, MODAL_BUFFER_VALUE_I32, MODAL_INDEX_BUFFER, RAM_ID},
+    modals_manager::{ModalManager, MODAL_INDEX_BUFFER, RAM_ID},
     toasts::ToastsManager,
 };
 
@@ -67,7 +66,7 @@ impl RamWidow {
         self.ram.refresh();
     }
 
-    pub fn show(&mut self, ctx: &Context, ui: &mut Ui) {
+    pub fn show(&mut self, ctx: &Context, _ui: &mut Ui) {
         egui::Window::new(&self.name)
             .id(egui::Id::new(format!("ram:{}", self.id)))
             .show(ctx, |ui| {

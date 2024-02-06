@@ -1,4 +1,4 @@
-use egui::{Context, Ui, Widget};
+use egui::{Context, Ui};
 use serde::{Serialize, Deserialize};
 
 
@@ -44,7 +44,7 @@ impl IndicatorWidget {
         self
     }
 
-    pub fn show(&mut self, ctx: &Context, ui: &mut Ui) {
+    pub fn show(&mut self, _ctx: &Context, ui: &mut Ui) {
         let formatted_value = self.write_in_format();
         ui.label(&self.label);
         if ui.button(formatted_value).clicked() {

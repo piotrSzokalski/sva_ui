@@ -53,7 +53,7 @@ impl ComponentListWidget {
         }
     }
 
-    pub fn show(&mut self, ctx: &Context, ui: &mut Ui) -> ComponentAction {
+    pub fn show(&mut self, _ctx: &Context, ui: &mut Ui) -> ComponentAction {
         let mut action = ComponentAction::DoNothing;
         ui.vertical(|ui| {
             ui.heading(&self.name);

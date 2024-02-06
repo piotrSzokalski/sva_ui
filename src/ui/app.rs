@@ -1,38 +1,38 @@
-use std::borrow::BorrowMut;
-use std::cell::{Ref, RefCell};
+
+
 use std::collections::HashMap;
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
-use std::rc::Rc;
-use std::time::Duration;
-use std::{default, fs};
-use std::{fmt::Display, fs::File};
 
-use eframe::glow::NONE;
-use egui::epaint::tessellator::path;
-use egui::{containers::Window, Context};
-use egui::{Button, Color32, CursorIcon, Label, ScrollArea, Stroke, Ui};
-use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
+use std::time::Duration;
+use std::{fs};
+use std::{fs::File};
+
+
+
+use egui::{Context};
+use egui::{ScrollArea, Ui};
+
 
 use egui_file::FileDialog;
 use egui_modal::Modal;
-use env_logger::Logger;
-use serde::de::value;
+
+
 use simple_virtual_assembler::components::connection::Connection;
 
 use egui_notify::Toasts;
 
 use simple_virtual_assembler::language::Language;
 
-use serde::{Deserialize, Serialize};
+
 
 use serde_json;
 
-use wasm_bindgen::prelude::*;
-use web_sys::{js_sys::Array, *};
+
+
 
 use crate::storage::connections_manager::{
-    self, ConnectionManager, ANOTHER_ID_BUFFER, CONNECTION_NAMES, CURRENT_CONN_ID_FOR_RENAME,
+    ConnectionManager, ANOTHER_ID_BUFFER, CONNECTION_NAMES, CURRENT_CONN_ID_FOR_RENAME,
     RELOAD_CONNECTION,
 };
 use crate::storage::custom_logger::CustomLogger;
@@ -167,7 +167,7 @@ impl SvaUI {
 
             return sva_ui;
         }
-        let mut sva_ui: SvaUI = Default::default();
+        let sva_ui: SvaUI = Default::default();
 
         sva_ui
     }
@@ -282,7 +282,7 @@ impl SvaUI {
                 writer.write_all(data.as_bytes()).unwrap();
                 writer.flush().unwrap();
             }
-            Err(err) => {
+            Err(_err) => {
                 self.toasts
                     .info(t!("error.export.cant_serialize"))
                     .set_duration(Some(Duration::from_secs(10)));
@@ -312,7 +312,7 @@ impl SvaUI {
                     }
                 }
             }
-            Err(err) => {
+            Err(_err) => {
                 //CustomLogger::log(&format!("Could not open file \n {}", err));
                 TOASTS
                     .lock()
@@ -326,7 +326,7 @@ impl SvaUI {
     // --------------------UI--------------------
 
     /// Shows debug window with logs and global variables
-    fn show_debug_window(&mut self, ctx: &Context, ui: &mut Ui) {
+    fn show_debug_window(&mut self, ctx: &Context, _ui: &mut Ui) {
         egui::Window::new(t!("window.debug"))
             .open(&mut self.debug_window_open)
             .show(ctx, |ui| {
@@ -363,7 +363,7 @@ impl SvaUI {
             });
     }
 
-    fn show_save_to_file_dialog(&mut self, ctx: &Context, ui: &mut Ui) {
+    fn show_save_to_file_dialog(&mut self, ctx: &Context, _ui: &mut Ui) {
         if let Some(dialog) = &mut self.save_file_dialog {
             if dialog.show(ctx).selected() {
                 if let Some(file) = dialog.path() {
@@ -381,7 +381,7 @@ impl SvaUI {
             }
         }
     }
-    fn show_import_file_dialog(&mut self, ctx: &Context, ui: &mut Ui) {
+    fn show_import_file_dialog(&mut self, ctx: &Context, _ui: &mut Ui) {
         // open file dialog
         if let Some(dialog) = &mut self.open_file_dialog {
             if dialog.show(ctx).selected() {
@@ -461,7 +461,7 @@ impl SvaUI {
         let change_component_name_modal = Modal::new(ctx, "change_component_name_modal");
         change_component_name_modal.show(|ui| {
             change_component_name_modal.title(ui, t!("modal.change_component_name.title"));
-            let mut buffer = &mut *MODAL_TEXT_EDIT_BUFFER.lock().unwrap();
+            let buffer = &mut *MODAL_TEXT_EDIT_BUFFER.lock().unwrap();
             ui.text_edit_singleline(buffer);
             ui.horizontal(|ui| {
                 if ui.button(t!("button.cancel")).clicked() {
@@ -501,7 +501,7 @@ impl SvaUI {
 
         set_ram_value_modal.show(|ui| {
             set_ram_value_modal.title(ui, t!("modal.set_ram_value.title"));
-            let mut buffer = &mut *MODAL_TEXT_EDIT_BUFFER.lock().unwrap();
+            let buffer = &mut *MODAL_TEXT_EDIT_BUFFER.lock().unwrap();
 
             ui.text_edit_singleline(buffer);
 
@@ -613,7 +613,7 @@ impl SvaUI {
             self.vms
                 .iter_mut()
                 .find(|vm| vm.get_id() == id)
-                .map(|mut vm| vm.halt_vm());
+                .map(|vm| vm.halt_vm());
             self.vms.retain(|vm| vm.get_id() != id);
         }
     }
@@ -625,7 +625,7 @@ impl SvaUI {
     }
 
     pub fn clear_file(&mut self) {
-        self.vms.iter_mut().for_each(|mut vm| vm.halt_vm());
+        self.vms.iter_mut().for_each(|vm| vm.halt_vm());
         self.vms.clear();
         self.rams.clear();
 
@@ -682,7 +682,7 @@ impl SvaUI {
             // vm with stack
             if ui.button(t!("button.add_vm")).clicked() {
                 let id = self.vms.last().map_or(0, |last| last.get_id() + 1);
-                let mut x = SVAWindow::new(id, true, max_height);
+                let x = SVAWindow::new(id, true, max_height);
                 self.active_vms.insert(id, true);
                 self.vms.push(x);
             }
@@ -739,7 +739,7 @@ impl SvaUI {
                         );
                     }
                 });
-                ScrollArea::new(true).show(ui, |ui| {});
+                ScrollArea::new(true).show(ui, |_ui| {});
                 for action in actions {
                     match action {
                         ComponentAction::DoNothing => {}
@@ -825,7 +825,7 @@ impl SvaUI {
 
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     let conns = ConnectionManager::get_connections().lock().unwrap().clone();
-                    for mut c in conns {
+                    for c in conns {
                         ConnectionWidget::new(c, &mut self.change_conn_name_modal_open)
                             .show(ctx, ui);
                     }
@@ -850,7 +850,7 @@ impl eframe::App for SvaUI {
     }
 
     /// Called each time the UI needs repainting, which may be many times per second.
-    fn update(&mut self, ctx: &eframe::egui::Context, frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
         // Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
         // For inspiration and more examples, go to https://emilk.github.io/egui
 

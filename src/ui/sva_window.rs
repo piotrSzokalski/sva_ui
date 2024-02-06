@@ -1,31 +1,31 @@
-use eframe::glow::NONE;
+
 use egui::Button;
 use egui::Color32;
 use egui::Stroke;
 use simple_virtual_assembler::vm::flag::Flag;
-use std::cell::Ref;
-use std::cell::RefCell;
-use std::collections::btree_map::Range;
-use std::default;
+
+
+
+
 use std::panic;
-use std::rc::Rc;
+
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::sync::MutexGuard;
-use std::sync::PoisonError;
+
+
 use std::thread::JoinHandle;
 use std::time::Duration;
 
-use egui::{containers::Window, widgets::Label, Context};
-use egui::{Align, Slider, TextEdit, Ui, Widget};
+use egui::{Context};
+use egui::{Ui};
 
 use simple_virtual_assembler::assembler::parsing_err::ParsingError;
-use simple_virtual_assembler::components::connection::Connection;
+
 use simple_virtual_assembler::components::port::Port;
 use simple_virtual_assembler::vm::instruction::Instruction;
 use simple_virtual_assembler::vm::virtual_machine::{VirtualMachine, VmStatus};
 
-use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
+use egui_code_editor::{CodeEditor, ColorTheme};
 
 use simple_virtual_assembler::assembler::assembler::Assembler;
 
@@ -35,7 +35,7 @@ use crate::storage::connections_manager::ConnectionManager;
 use crate::storage::connections_manager::CONNECTIONS;
 use crate::storage::custom_logger::CustomLogger;
 use crate::storage::toasts::ToastsManager;
-use crate::storage::toasts::TOASTS;
+
 
 use super::indicator_widget::IndicatorWidget;
 use super::syntax::sva_syntax;
@@ -105,7 +105,7 @@ impl Default for SVAWindow {
         let stack_indicators = (0..32)
             .collect::<Vec<i32>>()
             .iter()
-            .map(|index| IndicatorWidget::new("".to_owned()))
+            .map(|_index| IndicatorWidget::new("".to_owned()))
             .collect();
         Self {
             id: 0,
@@ -157,7 +157,7 @@ impl SVAWindow {
         let stack_indicators = (0..32)
             .collect::<Vec<i32>>()
             .iter()
-            .map(|index| IndicatorWidget::new("".to_owned()))
+            .map(|_index| IndicatorWidget::new("".to_owned()))
             .collect();
         let mut s = SVAWindow {
             id,
@@ -270,7 +270,7 @@ impl SVAWindow {
         self.assembler.set_language(language);
     }
 
-    pub fn show_stack(&mut self, ctx: &Context, ui: &mut Ui) {
+    pub fn show_stack(&mut self, _ctx: &Context, ui: &mut Ui) {
         if !self.stack_present {
             return;
         }
@@ -282,7 +282,7 @@ impl SVAWindow {
                     ui.separator();
                     ui.horizontal(|ui| {
                         let mut indicator_index = 0;
-                        for (index, item) in self.stack_data.iter().enumerate().rev() {
+                        for (_index, item) in self.stack_data.iter().enumerate().rev() {
                             ui.button(&item.to_string());
                             indicator_index += 1;
                         }
@@ -311,7 +311,7 @@ impl SVAWindow {
                             Ok(vm) => {
                                 ports = vm.get_ports();
                             }
-                            Err(err) => {
+                            Err(_err) => {
                                 poison_error = true;
                             }
                         }
@@ -363,7 +363,7 @@ impl SVAWindow {
                                                     Ok(mut vm) => {
                                                         vm.connect_with_id(index, conn, id)
                                                     }
-                                                    Err(err) => poison_error = true,
+                                                    Err(_err) => poison_error = true,
                                                 }
                                             }
                                             if poison_error {
@@ -388,7 +388,7 @@ impl SVAWindow {
                                                 let lock = self.vm.lock();
                                                 match lock {
                                                     Ok(mut vm) => vm.disconnect(index),
-                                                    Err(err) => poison_error = true,
+                                                    Err(_err) => poison_error = true,
                                                 }
                                                 let p_id =
                                                     self.id.to_string() + "P" + &index.to_string();
@@ -428,7 +428,7 @@ impl SVAWindow {
         flag: Flag,
         r: [i32; 4],
     ) {
-        let labels = ["acc", "pc", "flag", "r:0-3", "p:0-3", "status", "delay"];
+        let _labels = ["acc", "pc", "flag", "r:0-3", "p:0-3", "status", "delay"];
 
         ui.horizontal(|ui| {
             self.indicators[0].set(acc, "acc").show(ctx, ui);
@@ -618,7 +618,7 @@ impl SVAWindow {
     fn step(&mut self) {
         let mut poison_err = false;
         {
-            let mut vm_lock = self.vm.lock();
+            let vm_lock = self.vm.lock();
 
             match vm_lock {
                 Ok(mut vm) => {
@@ -640,7 +640,7 @@ impl SVAWindow {
         });
     }
 
-    pub fn show(&mut self, ctx: &Context, ui: &mut Ui) {
+    pub fn show(&mut self, ctx: &Context, _ui: &mut Ui) {
         let mut poison_error = false;
         {
             match self.vm.lock() {
@@ -660,7 +660,7 @@ impl SVAWindow {
         if poison_error {
             self.handle_poison_error();
         }
-        let (acc, pc, flag, r, p, vm_status, delay) = self.vm_state;
+        let (acc, pc, flag, r, _p, vm_status, _delay) = self.vm_state;
         self.vm_status = vm_status;
         // window
         egui::Window::new(&self.name)

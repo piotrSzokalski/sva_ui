@@ -1,10 +1,10 @@
 use std::{collections::HashMap, sync::Mutex, usize};
 
-use eframe::glow::NONE;
+
 use egui_modal::Modal;
 use once_cell::sync::Lazy;
 
-use super::{custom_logger::CustomLogger, toasts::ToastsManager};
+use super::{toasts::ToastsManager};
 
 static MODALS: Lazy<Mutex<HashMap<usize, Modal>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 
@@ -49,7 +49,7 @@ impl ModalManager {
                     }
                 }
             }
-            Err(err) => ToastsManager::show_err("Couldn't open modal(2)".to_owned(), 10),
+            Err(_err) => ToastsManager::show_err("Couldn't open modal(2)".to_owned(), 10),
         }
     }
 

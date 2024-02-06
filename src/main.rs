@@ -2,7 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 use backtrace::Backtrace;
 use std::fs::File;
-use std::io::{self, Write};
+use std::io::{Write};
 
 use chrono::{DateTime, Utc};
 
@@ -11,7 +11,7 @@ use chrono::{DateTime, Utc};
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result<()> {
     
-    use env_logger::Logger;
+    
     use sva_ui::storage::custom_logger::CustomLogger;
 
     std::panic::set_hook(Box::new(|panic_info| {
@@ -45,7 +45,7 @@ fn main() -> eframe::Result<()> {
 
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
 
-    let logger = CustomLogger::new();
+    let _logger = CustomLogger::new();
 
     let native_options = eframe::NativeOptions {
         //initial_window_size: Some([400.0, 300.0].into()),

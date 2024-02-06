@@ -1,8 +1,8 @@
-use egui::{containers::Window, widgets::Label, Context};
-use egui::{Align, RichText, ScrollArea, Slider, TextEdit, Ui, Widget};
+use egui::{Context};
+use egui::{RichText, ScrollArea, Ui};
 use serde::{Deserialize, Serialize};
-use simple_virtual_assembler::language::{self, Language};
-use simple_virtual_assembler::vm::instruction;
+use simple_virtual_assembler::language::{Language};
+
 
 #[derive(Serialize, Deserialize)]
 pub struct HelpWindow {
@@ -29,7 +29,7 @@ impl HelpWindow {
         self.is_open = !self.is_open;
     }
 
-    pub fn show(&mut self, ctx: &Context, ui: &mut Ui) {
+    pub fn show(&mut self, ctx: &Context, _ui: &mut Ui) {
         let registers_explanation_en = r#"
         acc         Accumulator, stores results of arithmetic and logic operations
         pc          Program counter, stores index of next instruction to be 
@@ -222,7 +222,7 @@ impl HelpWindow {
         "#;
         let interface_explanation_pl = r#""#;
 
-        let interface_explanation = match self.language {
+        let _interface_explanation = match self.language {
             Language::Pl => interface_explanation_pl,
             Language::En => interface_explanation_en,
         };

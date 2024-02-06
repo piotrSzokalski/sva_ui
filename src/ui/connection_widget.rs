@@ -1,13 +1,12 @@
-use std::any::Any;
+
 
 use egui::{Color32, Context, RichText, Ui};
-use egui_modal::Modal;
+
 use simple_virtual_assembler::components::connection::Connection;
 
 use crate::storage::{
     connections_manager::{
-        ConnectionManager, ANOTHER_ID_BUFFER, CONNECTIONS, CURRENT_CONN_ID_FOR_RENAME,
-        NEW_CONNECTION_NAME_BUFFER,
+        ConnectionManager, ANOTHER_ID_BUFFER, CURRENT_CONN_ID_FOR_RENAME,
     },
     custom_logger::CustomLogger,
     modals_manager::ModalManager,
@@ -26,7 +25,7 @@ impl<'a> ConnectionWidget<'a> {
         }
     }
 
-    pub fn show(&mut self, ctx: &Context, ui: &mut Ui) {
+    pub fn show(&mut self, _ctx: &Context, ui: &mut Ui) {
         let id = self.conn.get_id();
 
         let mut name = "".to_owned();
@@ -79,6 +78,6 @@ impl<'a> ConnectionWidget<'a> {
                 //ConnectionManager::remove_connection(id);
             }
         });
-        let collapsing_id = ui.make_persistent_id(self.conn.get_id());
+        let _collapsing_id = ui.make_persistent_id(self.conn.get_id());
     }
 }

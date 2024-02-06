@@ -126,7 +126,7 @@ impl ConnectionManager {
     }
 
     pub fn get_connection_to_current<'a>() -> Option<&'a mut Connection> {
-        if let Some(id) = *CURRENT_CONN_ID.lock().unwrap() {
+        if let Some(_id) = *CURRENT_CONN_ID.lock().unwrap() {
             //return ConnectionManager::get_connection(id);
             return None;
         }
@@ -163,7 +163,7 @@ impl ConnectionManager {
                 .iter()
                 .position(|c| c.get_id() == id);
         }
-        if let Some(i) = index {
+        if let Some(_i) = index {
             //  return CONNECTIONS.lock().unwrap().get_mut(i);
             return None;
         }
