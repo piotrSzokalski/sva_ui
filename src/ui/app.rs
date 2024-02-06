@@ -71,7 +71,7 @@ pub struct SvaUI {
     ui_scale: f32,
     help_widow: HelpWindow,
 
-    debug_mode: bool,
+    debug_window_open: bool,
 
     #[serde(skip)]
     opened_file: Option<PathBuf>,
@@ -125,7 +125,7 @@ impl Default for SvaUI {
                 language: Language::En,
             },
 
-            debug_mode: false,
+            debug_window_open: false,
             opened_file: None,
             open_file_dialog: None,
             save_file_dialog: None,
@@ -168,6 +168,7 @@ impl SvaUI {
             return sva_ui;
         }
         let mut sva_ui: SvaUI = Default::default();
+
         sva_ui
     }
 
@@ -327,8 +328,14 @@ impl SvaUI {
     /// Shows debug window with logs and global variables
     fn show_debug_window(&mut self, ctx: &Context, ui: &mut Ui) {
         egui::Window::new(t!("window.debug"))
-            .open(&mut self.debug_mode)
+            .open(&mut self.debug_window_open)
             .show(ctx, |ui| {
+                ui.collapsing("memory usage", |ui| {
+                    let current_mem = PEAK_ALLOC.peak_usage_as_kb();
+                    ui.label(format!("memory used: {} kb", current_mem));
+                    let peak_mem = PEAK_ALLOC.peak_usage_as_gb();
+                    ui.label(format!("The max amount that was used {}", peak_mem));
+                });
                 ui.collapsing("variables", |ui| {
                     ui.label("Connection state");
                     ui.separator();
@@ -533,7 +540,7 @@ impl SvaUI {
             };
             if let Some(value) = value {
                 *MODAL_BUFFER_VALUE_I32.lock().unwrap() = Some(value);
-            }      
+            }
 
             ui.horizontal(|ui| {
                 if ui.button(t!("button.cancel")).clicked() {
@@ -909,9 +916,11 @@ impl eframe::App for SvaUI {
                         self.help_widow.toggle_open_close();
                     }
 
-                    // if ui.button("Debug").clicked() {
-                    //     self.debug_mode = !self.debug_mode;
-                    // }
+                    if cfg!(debug_assertions) {
+                        if ui.button("Debug").clicked() {
+                            self.debug_window_open = !self.debug_window_open;
+                        }
+                    }
                     if ui
                         .button(t!("button.open_connection_side_panel"))
                         .on_hover_text(t!("button.open_connection_side_panel.on_hover_text"))
@@ -941,10 +950,7 @@ impl eframe::App for SvaUI {
         // Central panel
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            let current_mem = PEAK_ALLOC.peak_usage_as_kb();
-            ui.label(format!("memory used: {} kb", current_mem));
-            let peak_mem = PEAK_ALLOC.peak_usage_as_gb();
-            ui.label(format!("The max amount that was used {}", peak_mem));
+
             // vms
             for index in 0..self.vms.len() {
                 let vm = &mut self.vms[index];
