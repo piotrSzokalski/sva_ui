@@ -261,7 +261,7 @@ impl SVAWindow {
                 .show(ui, |ui| {
                     ui.separator();
                     ui.horizontal(|ui| {
-                        for (_index, item) in self.stack_data.iter().rev().enumerate() {
+                        for item in self.stack_data.iter().rev() {
                             let _ = ui.button(&item.to_string());
                         }
                     });
