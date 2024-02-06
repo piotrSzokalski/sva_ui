@@ -224,9 +224,9 @@ impl SvaUI {
                     .vms
                     .iter()
                     .find(|vm| vm.get_id() == TryInto::<usize>::try_into(vm_id).unwrap());
-                if x.is_some() {
+                if let Some(y) = x {
                     {
-                        x.unwrap().vm.lock().unwrap().connect(port_index, conn);
+                        y.vm.lock().unwrap().connect(port_index, conn);
                     }
                 }
             }
@@ -240,13 +240,13 @@ impl SvaUI {
             let id_pairs = conn.get_connected_rams();
             for (ram_id, port_index) in id_pairs {
                 let x = self.rams.iter_mut().find(|ram| ram.get_id() == ram_id);
-                if x.is_some() {
+                if let Some(y) = x {
                     if port_index == 0 {
-                        x.unwrap().ram.connect_index_port(conn);
+                        y.ram.connect_index_port(conn);
                     } else if port_index == 1 {
-                        x.unwrap().ram.connect_data_port(conn);
+                        y.ram.connect_data_port(conn);
                     } else if port_index == 2 {
-                        x.unwrap().ram.connect_mode_port(conn);
+                        y.ram.connect_mode_port(conn);
                     }
                 }
             }
@@ -420,11 +420,9 @@ impl SvaUI {
         }
         let ram_id = ram_id.unwrap();
         let ram = self.rams.iter_mut().find(|ram| ram.get_id() == ram_id);
-        match ram {
-            Some(ram) => {
-                ram.set_value_at_index(index, value);
-            }
-            None => {}
+
+        if let Some(r) = ram {
+            r.set_value_at_index(index, value);
         }
     }
 

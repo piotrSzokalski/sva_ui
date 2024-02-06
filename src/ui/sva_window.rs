@@ -261,10 +261,10 @@ impl SVAWindow {
                 .show(ui, |ui| {
                     ui.separator();
                     ui.horizontal(|ui| {
-                        let mut _indicator_index = 0;
-                        for (_index, item) in self.stack_data.iter().enumerate().rev() {
+                        for (_, (_index, item)) in
+                            self.stack_data.iter().enumerate().rev().enumerate()
+                        {
                             let _ = ui.button(&item.to_string());
-                            _indicator_index += 1;
                         }
                     });
                     ui.add_space(10.0);
