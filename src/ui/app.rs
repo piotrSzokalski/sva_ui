@@ -617,7 +617,7 @@ impl SvaUI {
     }
 
     pub fn clear_file(&mut self) {
-        self.vms.iter_mut().map(|mut vm| vm.halt_vm());
+        self.vms.iter_mut().for_each(|mut vm| vm.halt_vm());
         self.vms.clear();
         self.rams.clear();
 
