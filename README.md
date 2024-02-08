@@ -1,6 +1,6 @@
 # sva_ui 
 
-School project - Education software to aid in learing basics of highly abstraced psudeo assembly
+School project - Education software to aid in learing basics of coding in highly abstraced psudeo assembly
 
 ![image](https://github.com/piotrSzokalski/sva_ui/assets/101019797/2573681a-c07f-4196-9ba5-02a9c9df4da5)
 
