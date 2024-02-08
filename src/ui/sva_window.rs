@@ -558,7 +558,7 @@ impl SVAWindow {
                     .add(
                         egui::Slider::new(&mut self.delay_ms, 0..=5000)
                             .logarithmic(true)
-                            .text("delay"),
+                            .text(t!("sva_shell.indicator.delay")),
                     )
                     .changed()
                 {
