@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-          with:
+        with:
           submodules: recursive
       - name: Initialize and update submodules
         run: |
