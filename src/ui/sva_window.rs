@@ -124,7 +124,7 @@ impl Default for SVAWindow {
                 IndicatorWidget::new("p2".to_owned()),
                 IndicatorWidget::new("p3".to_owned()),
                 IndicatorWidget::new("status".to_owned()),
-                IndicatorWidget::new("delay".to_owned()),
+                IndicatorWidget::new(t!("sva_shell.indicator.delay").to_owned()),
             ],
             conn_ids: [None; 4],
             stack_present: false,
