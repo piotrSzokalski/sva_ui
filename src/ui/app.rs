@@ -19,6 +19,7 @@ use egui_notify::Toasts;
 use simple_virtual_assembler::language::Language;
 
 use serde_json;
+use simple_virtual_assembler::vm::virtual_machine::VmStatus;
 
 use crate::storage::connections_manager::{
     ConnectionManager, ANOTHER_ID_BUFFER, CONNECTION_NAMES, CURRENT_CONN_ID_FOR_RENAME,
@@ -257,9 +258,18 @@ impl SvaUI {
         self.copy_connections_and_their_names();
         self.disconnect_vm_ports();
         self.disconnect_ram_ports();
-        self.vms.iter_mut().for_each(|vm| vm.stop_vm());
+        let mut to_be_restated = Vec::new();
+        self.vms.iter_mut().for_each(|vm| {
+            if vm.get_status() == VmStatus::Running {
+                vm.stop_vm();
+                to_be_restated.push(vm.get_id())
+            }
+        });
         let serialized_state = serde_json::to_string(&self);
-        self.vms.iter_mut().for_each(|vm| vm.resume_vm());
+        self.vms
+            .iter_mut()
+            .filter(|vm| to_be_restated.contains(&vm.get_id()))
+            .for_each(|vm| vm.resume_vm());
         self.set_connections_and_their_names();
         self.reconnect_vm_ports();
         self.reconnect_ram_ports();
@@ -823,24 +833,30 @@ impl SvaUI {
 impl eframe::App for SvaUI {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        //CustomLogger::log("auto saving");
+        CustomLogger::log("auto saving");
         self.copy_connections_and_their_names();
         self.disconnect_vm_ports();
         self.disconnect_ram_ports();
-        self.vms.iter_mut().for_each(|vm| vm.stop_vm());
+        let mut to_be_restated: Vec<usize> = Vec::new();
+        self.vms.iter_mut().for_each(|vm| {
+            if vm.get_status() == VmStatus::Running {
+                vm.stop_vm();
+                to_be_restated.push(vm.get_id())
+            }
+        });
         eframe::set_value(storage, eframe::APP_KEY, self);
         self.reconnect_ram_ports();
         self.reconnect_vm_ports();
         self.set_connections_and_their_names();
-        self.vms.iter_mut().for_each(|vm| vm.resume_vm());
+        self.vms
+            .iter_mut()
+            .filter(|vm| to_be_restated.contains(&vm.get_id()))
+            .for_each(|vm| vm.resume_vm());
     }
 
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
-        // Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
-        // For inspiration and more examples, go to https://emilk.github.io/egui
-
-        //refreasing ram
+        //refreshing ram
         self.rams.iter_mut().for_each(|ram| ram.refresh());
 
         ctx.set_pixels_per_point(self.ui_scale);

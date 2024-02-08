@@ -9,8 +9,6 @@ use chrono::{DateTime, Utc};
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result<()> {
-    use sva_ui::storage::custom_logger::CustomLogger;
-
     std::panic::set_hook(Box::new(|panic_info| {
         // This closure will be called on panic
         let mut message = if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
