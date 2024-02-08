@@ -14,6 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive  # Ensure submodules are fetched during checkout
+      - name: Initialize and update submodules
+        run: |
+          git submodule sync
+          git submodule update --init --recursive
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
