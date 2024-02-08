@@ -124,7 +124,7 @@ toast_info.can_connect_connected_port:
   pl: Nie można połączyć portu który już jest połączany
 sva_shell.collapsing_stack:
   en: stack
-  pl: sots
+  pl: stos
 sva_shell.collapsing_ports:
   en: ports
   pl: porty
