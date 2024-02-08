@@ -1,0 +1,3 @@
+[submodule "simple_virtual_assembler"]
+	path = simple_virtual_assembler
+	url = https://github.com/piotrSzokalski/simple_virtual_assembler
