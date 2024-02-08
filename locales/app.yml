@@ -146,6 +146,9 @@ sva_shell.button.reset:
 sva_shell.button.step:
   en: Step
   pl: Wykonaj 1 instrukcje
+sva_shell.indicator.delay:
+  en: delay
+  pl: opuźnienie
 sva_shell.code_block:
   en: Code
   pl: Kod
