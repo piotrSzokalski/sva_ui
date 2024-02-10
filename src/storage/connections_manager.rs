@@ -73,6 +73,9 @@ impl ConnectionManager {
 
         CONNECTIONS.lock().unwrap().retain(|c| c.get_id() != id);
         *RELOAD_CONNECTION.lock().unwrap() = true;
+        if let Some(id) = id {
+            CONNECTION_NAMES.lock().unwrap().remove(&id);
+        }
     }
 
     pub fn set_connection(state: Vec<Connection>) {
@@ -89,6 +92,10 @@ impl ConnectionManager {
 
     pub fn clear_connections() {
         CONNECTIONS.lock().unwrap().clear();
+    }
+
+    pub fn clear_connection_names() {
+        CONNECTION_NAMES.lock().unwrap().clear();
     }
 
     pub fn set_current_id(id: Option<usize>) {

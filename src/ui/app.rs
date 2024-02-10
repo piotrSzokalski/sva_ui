@@ -23,7 +23,7 @@ use simple_virtual_assembler::vm::virtual_machine::VmStatus;
 
 use crate::storage::connections_manager::{
     ConnectionManager, ANOTHER_ID_BUFFER, CONNECTION_NAMES, CURRENT_CONN_ID_FOR_RENAME,
-    RELOAD_CONNECTION,
+    NEW_CONNECTION_NAME_BUFFER, RELOAD_CONNECTION,
 };
 use crate::storage::custom_logger::CustomLogger;
 use crate::storage::modals_manager::{
@@ -621,8 +621,14 @@ impl SvaUI {
         self.vms.iter_mut().for_each(|vm| vm.halt_vm());
         self.vms.clear();
         self.rams.clear();
-
+        self.conn_names_copies.clear();
+        ConnectionManager::clear_connection_names();
         ConnectionManager::clear_connections();
+        self.new_connection_name_buffer.clear();
+        {
+            let buffer = &mut *MODAL_TEXT_EDIT_BUFFER.lock().unwrap();
+            buffer.clear();
+        }
     }
 
     fn show_file_menu(&mut self, ui: &mut Ui) {
