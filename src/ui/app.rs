@@ -23,7 +23,7 @@ use simple_virtual_assembler::vm::virtual_machine::VmStatus;
 
 use crate::storage::connections_manager::{
     ConnectionManager, ANOTHER_ID_BUFFER, CONNECTION_NAMES, CURRENT_CONN_ID_FOR_RENAME,
-    NEW_CONNECTION_NAME_BUFFER, RELOAD_CONNECTION,
+    RELOAD_CONNECTION,
 };
 use crate::storage::custom_logger::CustomLogger;
 use crate::storage::modals_manager::{
